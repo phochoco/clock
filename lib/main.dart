@@ -13,21 +13,31 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
   
-  // AdMob 초기화
-  await AdService.initialize();
-  
-  // iOS ATT 권한 요청
-  if (Platform.isIOS) {
-    final status = await AppTrackingTransparency.trackingAuthorizationStatus;
-    if (status == TrackingStatus.notDetermined) {
-      await AppTrackingTransparency.requestTrackingAuthorization();
-    }
-  }
-  
-  // 보상형 광고 미리 로드
-  AdService.loadRewardedAd();
-  
+  // 앱을 먼저 시작하고, AdMob 초기화는 백그라운드에서 처리
   runApp(const MyClockApp());
+  
+  // AdMob 초기화 (백그라운드)
+  _initializeAds();
+}
+
+// AdMob 초기화를 백그라운드에서 처리
+Future<void> _initializeAds() async {
+  try {
+    await AdService.initialize();
+    
+    // iOS ATT 권한 요청
+    if (Platform.isIOS) {
+      final status = await AppTrackingTransparency.trackingAuthorizationStatus;
+      if (status == TrackingStatus.notDetermined) {
+        await AppTrackingTransparency.requestTrackingAuthorization();
+      }
+    }
+    
+    // 보상형 광고 미리 로드
+    AdService.loadRewardedAd();
+  } catch (e) {
+    print('AdMob 초기화 실패: $e');
+  }
 }
 
 class MyClockApp extends StatelessWidget {
