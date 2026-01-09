@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'dart:io';
-import 'package:app_tracking_transparency/app_tracking_transparency.dart';
 import 'screens/lobby_screen.dart';
 import 'services/ad_service.dart';
 
@@ -24,14 +22,6 @@ void main() async {
 Future<void> _initializeAds() async {
   try {
     await AdService.initialize();
-    
-    // iOS ATT 권한 요청
-    if (Platform.isIOS) {
-      final status = await AppTrackingTransparency.trackingAuthorizationStatus;
-      if (status == TrackingStatus.notDetermined) {
-        await AppTrackingTransparency.requestTrackingAuthorization();
-      }
-    }
     
     // 보상형 광고 미리 로드
     AdService.loadRewardedAd();
