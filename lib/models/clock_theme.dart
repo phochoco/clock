@@ -163,7 +163,7 @@ class ClockThemeList {
       end: Alignment.bottomRight,
     ),
     isPremium: true,
-    starCost: 30,
+    starCost: 200,
   );
   
   /// 달빛 시계 (프리미엄)
@@ -184,7 +184,7 @@ class ClockThemeList {
       end: Alignment.bottomCenter,
     ),
     isPremium: true,
-    starCost: 20,
+    starCost: 100,
   );
   
   /// 크리스탈 시계 (프리미엄)
@@ -205,7 +205,7 @@ class ClockThemeList {
       end: Alignment.bottomRight,
     ),
     isPremium: true,
-    starCost: 25,
+    starCost: 150,
   );
   
   /// 서커스 시계 (프리미엄)
@@ -218,7 +218,7 @@ class ClockThemeList {
     backgroundColor: Colors.white,
     backgroundGradient: null,
     isPremium: true,
-    starCost: 15,
+    starCost: 150,
   );
   
   static const List<ClockTheme> all = [
