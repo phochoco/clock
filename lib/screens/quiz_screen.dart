@@ -1,9 +1,13 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import '../models/clock_time.dart';
 import '../models/quiz_level.dart';
 import '../models/reward.dart';
+import '../models/clock_theme.dart';
 import '../services/reward_service.dart';
+import '../services/theme_service.dart';
+import '../services/tts_service.dart';
 import '../utils/colors.dart';
 import '../utils/haptic.dart';
 import '../widgets/analog_clock.dart';
@@ -22,6 +26,7 @@ class _QuizScreenState extends State<QuizScreen> {
   
   QuizLevel _currentLevel = QuizLevel.level1;
   QuizQuestion? _currentQuestion;
+  QuizQuestion? _previousQuestion; // 이전 문제 저장 (중복 방지용)
   ClockTime? _userAnswer;
   bool _showResult = false;
   bool _isCorrect = false;
@@ -34,19 +39,68 @@ class _QuizScreenState extends State<QuizScreen> {
   String _comboMessage = '';
   bool _showCombo = false;
   
+  // 선택된 테마
+  ClockTheme _selectedTheme = ClockThemeList.basic;
+  
+  // 오디오 플레이어
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  
   @override
   void initState() {
     super.initState();
+    _loadTheme();
+    _initTts();
     _generateQuestion();
   }
   
-  void _generateQuestion() {
+  Future<void> _initTts() async {
+    await TtsService.initialize();
+  }
+  
+  @override
+  void dispose() {
+    TtsService.stop();
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+  
+  Future<void> _loadTheme() async {
+    final theme = await ThemeService.getSelectedTheme();
     setState(() {
-      _currentQuestion = QuizQuestion.random(_currentLevel);
+      _selectedTheme = theme;
+    });
+  }
+  
+  void _generateQuestion() {
+    QuizQuestion newQuestion;
+    int attempts = 0;
+    const maxAttempts = 10; // 무한 루프 방지
+    
+    // 이전 문제와 다른 문제가 나올 때까지 반복
+    do {
+      newQuestion = QuizQuestion.random(_currentLevel);
+      attempts++;
+    } while (
+      _previousQuestion != null &&
+      newQuestion.hour == _previousQuestion!.hour &&
+      newQuestion.minute == _previousQuestion!.minute &&
+      attempts < maxAttempts
+    );
+    
+    setState(() {
+      _previousQuestion = _currentQuestion; // 현재 문제를 이전 문제로 저장
+      _currentQuestion = newQuestion;
       _userAnswer = null;
       _showResult = false;
       _isCorrect = false;
       _showCombo = false; // 콤보 메시지 숨기기
+    });
+    
+    // 문제 읽어주기 (화면 갱신 후 실행)
+    Future.delayed(Duration(milliseconds: 500), () {
+      if (mounted) {
+        TtsService.speak('${newQuestion.answerText}을 만들어보세요!');
+      }
     });
   }
   
@@ -100,6 +154,9 @@ class _QuizScreenState extends State<QuizScreen> {
       _totalQuestions++;
       if (correct) {
         _score++;
+        
+        // 정답 음성 재생 (MP3)
+        _audioPlayer.play(AssetSource('good/good.mp3'));
         
         // 콤보 증가
         _combo++;
@@ -515,6 +572,7 @@ class _QuizScreenState extends State<QuizScreen> {
             },
             showGuideline: true,
             showMinuteNumbers: _currentLevel.index >= 2,
+            theme: _selectedTheme, // 선택된 테마 적용
           ),
         ),
       ],
@@ -560,133 +618,156 @@ class _QuizScreenState extends State<QuizScreen> {
   }
   
   Widget _buildResultArea() {
-    return Column(
-      children: [
-        // 결과 메시지
-        if (_isCorrect)
-          // 정답일 때: 박스 형태
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 24),
+      child: _isCorrect
+          ? // 정답일 때: 메시지와 버튼을 하나의 박스로 통합
           Container(
-            margin: EdgeInsets.symmetric(horizontal: 24),
-            padding: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.success,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.check_circle,
-                      color: Colors.white,
-                      size: 32,
+              decoration: BoxDecoration(
+                color: AppColors.success,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Column(
+                children: [
+                  // 상단: 정답 메시지 영역 (모두 한 줄로)
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(20, 16, 20, 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.check_circle,
+                          color: Colors.white,
+                          size: 22,
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          '정답이에요!',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        SizedBox(width: 6),
+                        Text(
+                          '⭐ +${_getStarsEarned()}',
+                          style: TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                        // 콤보 메시지도 같은 줄에
+                        if (_showCombo) ...[
+                          SizedBox(width: 6),
+                          Text(
+                            '$_comboMessage',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    SizedBox(width: 12),
-                    Text(
-                      '정답이에요! 🎉',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                  ),
+                  // 하단: 다음 버튼
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    child: GestureDetector(
+                      onTap: () {
+                        // 5문제 완료 체크
+                        if (_score >= questionsPerLevel) {
+                          // 레벨 완료!
+                          _showLevelCompleteDialog();
+                        } else {
+                          // 다음 문제
+                          _generateQuestion();
+                        }
+                      },
+                      child: Container(
+                        width: double.infinity,
+                        height: 54,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.15),
+                              blurRadius: 8,
+                              offset: Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Text(
+                            '다음 문제',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.success,
+                            ),
+                          ),
+                        ),
                       ),
                     ),
-                  ],
-                ),
-                SizedBox(height: 12),
-                // 별 획득 표시
+                  ),
+                ],
+              ),
+            )
+          : // 오답일 때: 기존 방식 유지
+          Column(
+              children: [
                 Text(
-                  '⭐ +${_getStarsEarned()}',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.white,
-                  ),
-                ),
-                // 콤보 메시지 (간결하게)
-                if (_showCombo) ...[
-                  SizedBox(height: 6),
-                  Text(
-                    '$_comboMessage',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          )
-        else
-          // 오답일 때: 텍스트만
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: 24),
-            child: Text(
-              '다시 한번 해볼까요? 😊',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.error,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ),
-        
-        SizedBox(height: 16),
-        
-        // 다음 문제 또는 다시 시도 버튼
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: 24),
-          child: GestureDetector(
-            onTap: () {
-              if (_isCorrect) {
-                // 정답일 때: 5문제 완료 체크
-                if (_score >= questionsPerLevel) {
-                  // 레벨 완료!
-                  _showLevelCompleteDialog();
-                } else {
-                  // 다음 문제
-                  _generateQuestion();
-                }
-              } else {
-                // 오답일 때: 다시 시도 (결과만 숨김 + 시계 리셋)
-                setState(() {
-                  _showResult = false;
-                  _userAnswer = null;
-                });
-                // 시계를 초기 위치(12:00)로 리셋
-                _clockKey.currentState?.setTime(ClockTime(hour: 12, minute: 0));
-              }
-            },
-            child: Container(
-              width: double.infinity,
-              height: 60,
-              decoration: BoxDecoration(
-                color: AppColors.accentYellow,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.accentYellow.withOpacity(0.4),
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Text(
-                  _isCorrect ? '다음 문제' : '다시 시도',
+                  '다시 한번 해볼까요? 😊',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
+                    color: AppColors.error,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 16),
+                GestureDetector(
+                  onTap: () {
+                    // 오답일 때: 다시 시도 (결과만 숨김 + 시계 리셋)
+                    setState(() {
+                      _showResult = false;
+                      _userAnswer = null;
+                    });
+                    // 시계를 초기 위치(12:00)로 리셋
+                    _clockKey.currentState?.setTime(ClockTime(hour: 12, minute: 0));
+                  },
+                  child: Container(
+                    width: double.infinity,
+                    height: 60,
+                    decoration: BoxDecoration(
+                      color: AppColors.accentYellow,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.accentYellow.withOpacity(0.4),
+                          blurRadius: 10,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Center(
+                      child: Text(
+                        '다시 시도',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.textDark,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ),
-        ),
-      ],
     );
   }
 }

@@ -25,10 +25,20 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
   
   Future<void> _loadBannerAd() async {
-    final ad = await AdService.loadBannerAd();
-    setState(() {
-      _bannerAd = ad;
-    });
+    try {
+      final ad = await AdService.loadBannerAd();
+      if (mounted) {
+        setState(() {
+          _bannerAd = ad;
+        });
+      }
+    } catch (e) {
+      print('배너 광고 로드 실패: $e');
+      // 5초 후 재시도
+      Future.delayed(Duration(seconds: 5), () {
+        if (mounted) _loadBannerAd();
+      });
+    }
   }
   
   @override
@@ -156,7 +166,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           style: TextStyle(
             fontSize: 40,
             fontWeight: FontWeight.bold,
-            color: AppColors.textDark,
+            color: Color(0xFF5A3E2B),
           ),
         ),
         
@@ -166,7 +176,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
           '재미있게 시계를 읽어요!',
           style: TextStyle(
             fontSize: 18,
-            color: AppColors.textLight,
+            color: Color(0xFF7A6652),
           ),
         ),
       ],
@@ -202,7 +212,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
             Icon(
               icon,
               size: 40,
-              color: Colors.white,
+              color: Color(0xFF4A2F20),
             ),
             SizedBox(width: 16),
             Text(
@@ -210,7 +220,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
               style: TextStyle(
                 fontSize: 28,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: Color(0xFF5A3E2B),
               ),
             ),
           ],

@@ -234,7 +234,13 @@ class AnalogClockState extends State<AnalogClock> with SingleTickerProviderState
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               gradient: widget.theme?.backgroundGradient,
-              color: widget.theme?.backgroundGradient == null ? widget.theme?.backgroundColor : null,
+              color: widget.theme?.backgroundGradient == null 
+                  ? (widget.theme?.backgroundColor ?? Colors.white)
+                  : null,
+              border: Border.all(
+                color: Color(0xFFE8D5C4), // 베이지 테두리
+                width: 8,
+              ),
               boxShadow: [
                 BoxShadow(
                   color: Colors.black.withOpacity(0.2),

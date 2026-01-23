@@ -4,9 +4,27 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// AdMob 광고 관리 서비스
 class AdService {
+  // 테스트 모드 (개발 중에는 true, 프로덕션에서는 false)
+  static const bool _isTestMode = false;
+  
   // 광고 단위 ID
-  static const String _rewardedAdUnitId = 'ca-app-pub-7214081640200790/3417247585';
-  static const String _bannerAdUnitId = 'ca-app-pub-7214081640200790/3629000574';
+  static String get _rewardedAdUnitId {
+    if (_isTestMode) {
+      return Platform.isIOS
+          ? 'ca-app-pub-3940256099942544/1712485313' // iOS 테스트 ID
+          : 'ca-app-pub-3940256099942544/5224354917'; // Android 테스트 ID
+    }
+    return 'ca-app-pub-7214081640200790/3417247585';
+  }
+  
+  static String get _bannerAdUnitId {
+    if (_isTestMode) {
+      return Platform.isIOS
+          ? 'ca-app-pub-3940256099942544/2934735716' // iOS 테스트 ID
+          : 'ca-app-pub-3940256099942544/6300978111'; // Android 테스트 ID
+    }
+    return 'ca-app-pub-7214081640200790/3629000574';
+  }
   
   // 보상형 광고 일일 제한
   static const int _maxRewardedAdsPerDay = 3;
@@ -15,6 +33,10 @@ class AdService {
   
   static BannerAd? _bannerAd;
   static RewardedAd? _rewardedAd;
+  static bool _isRewardedAdLoading = false;
+  
+  /// 보상형 광고가 준비되었는지 확인
+  static bool get isRewardedAdReady => _rewardedAd != null;
   
   /// AdMob 초기화
   static Future<void> initialize() async {
@@ -46,31 +68,52 @@ class AdService {
   
   /// 보상형 광고 로드
   static Future<void> loadRewardedAd() async {
-    await RewardedAd.load(
-      adUnitId: _rewardedAdUnitId,
-      request: AdRequest(),
-      rewardedAdLoadCallback: RewardedAdLoadCallback(
-        onAdLoaded: (ad) {
-          print('보상형 광고 로드 성공');
-          _rewardedAd = ad;
-        },
-        onAdFailedToLoad: (error) {
-          print('보상형 광고 로드 실패: $error');
-          _rewardedAd = null;
-        },
-      ),
-    );
+    if (_isRewardedAdLoading) {
+      print('보상형 광고 이미 로딩 중...');
+      return;
+    }
+    
+    _isRewardedAdLoading = true;
+    
+    try {
+      await RewardedAd.load(
+        adUnitId: _rewardedAdUnitId,
+        request: AdRequest(),
+        rewardedAdLoadCallback: RewardedAdLoadCallback(
+          onAdLoaded: (ad) {
+            print('보상형 광고 로드 성공');
+            _rewardedAd = ad;
+            _isRewardedAdLoading = false;
+          },
+          onAdFailedToLoad: (error) {
+            print('보상형 광고 로드 실패: $error');
+            _rewardedAd = null;
+            _isRewardedAdLoading = false;
+          },
+        ),
+      );
+    } catch (e) {
+      print('보상형 광고 로드 예외: $e');
+      _isRewardedAdLoading = false;
+    }
   }
   
   /// 보상형 광고 표시
   static Future<bool> showRewardedAd() async {
-    if (_rewardedAd == null) {
+    // 광고가 준비되지 않았으면 로드 시도
+    if (_rewardedAd == null && !_isRewardedAdLoading) {
       await loadRewardedAd();
-      // 로드 대기
-      await Future.delayed(Duration(seconds: 1));
+      // 로드 완료 대기 (최대 3초)
+      int waitCount = 0;
+      while (_rewardedAd == null && waitCount < 30) {
+        await Future.delayed(Duration(milliseconds: 100));
+        waitCount++;
+      }
     }
     
+    // 여전히 광고가 없으면 실패
     if (_rewardedAd == null) {
+      print('보상형 광고를 불러올 수 없습니다');
       return false;
     }
     

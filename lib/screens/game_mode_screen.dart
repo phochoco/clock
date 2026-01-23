@@ -13,7 +13,11 @@ class GameModeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.bgCream,
       appBar: AppBar(
-        title: Text('🎮 게임 모드'),
+        title: Text(
+          '🎮 게임 모드',
+          style: TextStyle(color: Color(0xFF5A3E2B)),
+        ),
+        iconTheme: IconThemeData(color: Color(0xFF5A3E2B)),
         backgroundColor: AppColors.bgCream,
         elevation: 0,
       ),
@@ -119,7 +123,7 @@ class GameModeScreen extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      color: Color(0xFF4A2F20), // 진한 갈색 - 가시성 향상
                     ),
                   ),
                   SizedBox(height: 4),
@@ -127,7 +131,7 @@ class GameModeScreen extends StatelessWidget {
                     description,
                     style: TextStyle(
                       fontSize: 14,
-                      color: Colors.white.withOpacity(0.9),
+                      color: Color(0xFF6B4A32), // 중간 갈색 - 가시성 향상
                     ),
                   ),
                 ],

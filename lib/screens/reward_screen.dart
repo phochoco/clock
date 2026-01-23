@@ -187,6 +187,17 @@ class _RewardScreenState extends State<RewardScreen> {
       return;
     }
     
+    // 광고 준비 상태 확인
+    if (!AdService.isRewardedAdReady) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('광고를 불러오는 중입니다. 잠시 후 다시 시도해주세요!'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+    
     final rewarded = await AdService.showRewardedAd();
     
     if (rewarded) {
