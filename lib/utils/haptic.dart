@@ -7,17 +7,17 @@ class HapticHelper {
   static void lightImpact() {
     HapticFeedback.selectionClick();
   }
-  
+
   /// 중간 강도 피드백 (정각 도달)
   static void mediumImpact() {
     HapticFeedback.mediumImpact();
   }
-  
+
   /// 강한 피드백 (정답)
   static void heavyImpact() {
     HapticFeedback.heavyImpact();
   }
-  
+
   /// 진동 피드백 (오답)
   static void vibrate() {
     HapticFeedback.vibrate();

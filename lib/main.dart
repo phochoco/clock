@@ -6,30 +6,30 @@ import 'services/ad_service.dart';
 void main() async {
   // Flutter 바인딩 초기화
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // 세로 모드 고정
   SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-  
+
   // AdMob 초기화 (앱 시작 전에 완료)
   try {
     await AdService.initialize();
-    print('AdMob 초기화 완료');
-    
+    debugPrint('AdMob 초기화 완료');
+
     // 보상형 광고 미리 로드
     AdService.loadRewardedAd();
   } catch (e) {
-    print('AdMob 초기화 실패: $e');
+    debugPrint('AdMob 초기화 실패: $e');
   }
-  
+
   // 앱 시작
   runApp(const MyClockApp());
 }
 
 class MyClockApp extends StatelessWidget {
-  const MyClockApp({Key? key}) : super(key: key);
+  const MyClockApp({super.key});
 
   @override
   Widget build(BuildContext context) {

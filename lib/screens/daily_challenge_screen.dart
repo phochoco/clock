@@ -5,14 +5,17 @@ import '../models/quiz_level.dart';
 import '../models/clock_theme.dart';
 import '../widgets/analog_clock.dart';
 import '../utils/colors.dart';
+import '../utils/clock_answer_validator.dart';
 import '../utils/haptic.dart';
 import '../services/daily_challenge_service.dart';
 import '../services/reward_service.dart';
 import '../services/theme_service.dart';
+import '../widgets/glass_container.dart';
+import '../widgets/mesh_background.dart';
 
 class DailyChallengeScreen extends StatefulWidget {
-  const DailyChallengeScreen({Key? key}) : super(key: key);
-  
+  const DailyChallengeScreen({super.key});
+
   @override
   State<DailyChallengeScreen> createState() => _DailyChallengeScreenState();
 }
@@ -22,40 +25,40 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
   bool _isCompleted = false;
   int _currentQuestionIndex = 0;
   int _streak = 0;
-  
+
   // 문제 리스트 (3개 고정)
   List<QuizQuestion> _questions = [];
   ClockTime? _userAnswer;
-  
+
   // 시계 테마
   ClockTheme? _theme;
-  
+
   // 타이머
   Timer? _countdownTimer;
   int _timeUntilReset = 0;
-  
+
   @override
   void initState() {
     super.initState();
     _loadData();
   }
-  
+
   @override
   void dispose() {
     _countdownTimer?.cancel();
     super.dispose();
   }
-  
+
   Future<void> _loadData() async {
     final completed = await DailyChallengeService.isCompletedToday();
     final streak = await DailyChallengeService.getStreak();
     final theme = await ThemeService.getSelectedTheme();
-    
+
     setState(() {
       _isCompleted = completed;
       _streak = streak;
       _theme = theme;
-      
+
       if (!completed) {
         _generateQuestions();
         _startCountdown();
@@ -65,7 +68,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
       }
     });
   }
-  
+
   void _generateQuestions() {
     // 레벨 3, 4, 5 문제 각 1개씩
     _questions = [
@@ -74,7 +77,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
       QuizQuestion.random(QuizLevel.level5),
     ];
   }
-  
+
   void _startCountdown() {
     _countdownTimer = Timer.periodic(Duration(seconds: 1), (timer) {
       setState(() {
@@ -82,43 +85,28 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
       });
     });
   }
-  
+
   void _checkAnswer() {
     if (_userAnswer == null) return;
-    
+
     final currentQuestion = _questions[_currentQuestionIndex];
     final correctTime = ClockTime(
       hour: currentQuestion.hour,
       minute: currentQuestion.minute,
     );
-    
-    // 각도로 비교
-    var userMinuteAngle = _userAnswer!.minuteAngle;
-    var correctMinuteAngle = correctTime.minuteAngle;
-    
-    // 각도 정규화
-    userMinuteAngle = userMinuteAngle % 360;
-    if (userMinuteAngle < 0) userMinuteAngle += 360;
-    correctMinuteAngle = correctMinuteAngle % 360;
-    if (correctMinuteAngle < 0) correctMinuteAngle += 360;
-    
-    var angleDiff = (userMinuteAngle - correctMinuteAngle).abs();
-    if (angleDiff > 180) {
-      angleDiff = 360 - angleDiff;
-    }
-    
-    final correct = angleDiff <= 10.0;
-    
+
+    final correct = ClockAnswerValidator.isCorrect(_userAnswer!, correctTime);
+
     if (correct) {
       _onCorrectAnswer();
     } else {
       _onWrongAnswer();
     }
   }
-  
+
   void _onCorrectAnswer() {
     HapticHelper.heavyImpact();
-    
+
     if (_currentQuestionIndex < _questions.length - 1) {
       // 다음 문제
       setState(() {
@@ -130,10 +118,10 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
       _completeChallenge();
     }
   }
-  
+
   void _onWrongAnswer() {
     HapticHelper.vibrate();
-    
+
     // 오답이지만 다시 시도 가능 (제한 없음)
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -143,14 +131,14 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
       ),
     );
   }
-  
+
   Future<void> _completeChallenge() async {
     await DailyChallengeService.completeChallenge();
     final newStreak = await DailyChallengeService.getStreak();
-    
+
     // 기본 보상
     int stars = 5;
-    
+
     // 연속 출석 보너스
     if (newStreak >= 30) {
       stars += 10;
@@ -159,17 +147,17 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
     } else if (newStreak >= 3) {
       stars += 2;
     }
-    
+
     await RewardService.addStars(stars);
-    
+
     setState(() {
       _isCompleted = true;
       _streak = newStreak;
     });
-    
+
     _showCompletionDialog(stars, newStreak);
   }
-  
+
   void _showCompletionDialog(int stars, int streak) {
     String bonusMessage = '';
     if (streak >= 30) {
@@ -179,7 +167,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
     } else if (streak >= 3) {
       bonusMessage = '✨ 3일 연속! +2 보너스!';
     }
-    
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -199,7 +187,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
             Container(
               padding: EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: AppColors.accentYellow.withOpacity(0.2),
+                color: AppColors.warning.withValues(alpha: 0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(
@@ -215,10 +203,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
                   SizedBox(height: 8),
                   Text(
                     '🔥 $streak일 연속 출석',
-                    style: TextStyle(
-                      fontSize: 18,
-                      color: AppColors.textDark,
-                    ),
+                    style: TextStyle(fontSize: 18, color: AppColors.textDark),
                   ),
                   if (bonusMessage.isNotEmpty) ...[
                     SizedBox(height: 8),
@@ -242,47 +227,56 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
               Navigator.pop(context); // 다이얼로그 닫기
               Navigator.pop(context); // 화면 닫기
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.hourRed,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.hourRed),
             child: Text('확인', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
   }
-  
+
   String _formatTime(int seconds) {
     final hours = seconds ~/ 3600;
     final minutes = (seconds % 3600) ~/ 60;
     final secs = seconds % 60;
-    
+
     if (hours > 0) {
-      return '$hours시간 ${minutes}분';
+      return '$hours시간 $minutes분';
     } else if (minutes > 0) {
-      return '$minutes분 ${secs}초';
+      return '$minutes분 $secs초';
     } else {
       return '$secs초';
     }
   }
-  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgCream,
+      backgroundColor: AppColors.bgPrimary,
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text('🌟 데일리 챌린지'),
-        backgroundColor: AppColors.bgCream,
+        title: Text(
+          '데일리 챌린지',
+          style: TextStyle(
+            color: AppColors.textDark,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        iconTheme: IconThemeData(color: AppColors.textDark),
+        backgroundColor: Colors.transparent,
         elevation: 0,
+        centerTitle: true,
       ),
       body: _theme == null
           ? Center(child: CircularProgressIndicator())
-          : _isCompleted
-              ? _buildCompletedView()
-              : _buildChallengeView(),
+          : MeshBackground(
+              child: _isCompleted
+                  ? _buildCompletedView()
+                  : _buildChallengeView(),
+            ),
     );
   }
-  
+
   Widget _buildCompletedView() {
     return Center(
       child: Padding(
@@ -290,11 +284,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.check_circle,
-              size: 100,
-              color: AppColors.success,
-            ),
+            Icon(Icons.check_circle, size: 100, color: AppColors.success),
             SizedBox(height: 24),
             Text(
               '오늘 챌린지 완료!',
@@ -305,12 +295,10 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
               ),
             ),
             SizedBox(height: 16),
-            Container(
+            GlassContainer(
               padding: EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-              ),
+              borderRadius: 16,
+              opacity: 0.8,
               child: Column(
                 children: [
                   Text(
@@ -324,10 +312,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
                   SizedBox(height: 16),
                   Text(
                     '다음 챌린지까지',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: AppColors.textLight,
-                    ),
+                    style: TextStyle(fontSize: 16, color: AppColors.textLight),
                   ),
                   SizedBox(height: 8),
                   Text(
@@ -346,10 +331,10 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
       ),
     );
   }
-  
+
   Widget _buildChallengeView() {
     final currentQuestion = _questions[_currentQuestionIndex];
-    
+
     return SafeArea(
       child: Padding(
         padding: EdgeInsets.all(16),
@@ -367,21 +352,12 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
       ),
     );
   }
-  
+
   Widget _buildHeader() {
-    return Container(
+    return GlassContainer(
       padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 10,
-            offset: Offset(0, 4),
-          ),
-        ],
-      ),
+      borderRadius: 16,
+      opacity: 0.6,
       child: Column(
         children: [
           // 진행도
@@ -390,7 +366,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
             children: List.generate(3, (index) {
               final completed = index < _currentQuestionIndex;
               final current = index == _currentQuestionIndex;
-              
+
               return Container(
                 margin: EdgeInsets.symmetric(horizontal: 4),
                 width: 60,
@@ -398,7 +374,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
                 decoration: BoxDecoration(
                   color: completed || current
                       ? AppColors.hourRed
-                      : AppColors.border,
+                      : AppColors.borderLight,
                   borderRadius: BorderRadius.circular(4),
                 ),
               );
@@ -416,22 +392,20 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
           SizedBox(height: 8),
           Text(
             '🔥 $_streak일 연속',
-            style: TextStyle(
-              fontSize: 16,
-              color: AppColors.textLight,
-            ),
+            style: TextStyle(fontSize: 16, color: AppColors.textLight),
           ),
         ],
       ),
     );
   }
-  
+
   Widget _buildClock() {
-    return Container(
+    return SizedBox(
       width: 280,
       height: 280,
       child: AnalogClock(
         initialTime: _userAnswer,
+        notifyInitialTime: false,
         interactive: true,
         showGuideline: false,
         showMinuteNumbers: false,
@@ -444,14 +418,12 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
       ),
     );
   }
-  
+
   Widget _buildQuestion(QuizQuestion question) {
-    return Container(
+    return GlassContainer(
       padding: EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
+      borderRadius: 16,
+      opacity: 0.8,
       child: Text(
         question.answerText,
         style: TextStyle(
@@ -463,7 +435,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
       ),
     );
   }
-  
+
   Widget _buildCheckButton() {
     return SizedBox(
       width: double.infinity,
@@ -472,7 +444,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
         onPressed: _userAnswer == null ? null : _checkAnswer,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.hourRed,
-          disabledBackgroundColor: AppColors.border,
+          disabledBackgroundColor: AppColors.borderLight,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),

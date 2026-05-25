@@ -33,8 +33,8 @@ android {
         applicationId = "com.tictacktreasure.clock"
         minSdk = flutter.minSdkVersion  // Android 5.0 (Lollipop)
         targetSdk = 36  // Android 15
-        versionCode = 8
-        versionName = "1.0.0"
+        versionCode = flutter.versionCode
+        versionName = flutter.versionName
     }
 
     signingConfigs {
@@ -57,13 +57,9 @@ android {
             }
             isMinifyEnabled = true
             isShrinkResources = true
-            
-            // Fix for "failed to strip debug symbols" error
-            ndk {
-                debugSymbolLevel = "SYMBOL_TABLE"
-            }
         }
     }
+
 }
 
 flutter {

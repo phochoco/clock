@@ -23,7 +23,7 @@ extension QuizLevelExtension on QuizLevel {
         return '레벨 5: 마스터';
     }
   }
-  
+
   /// 레벨 설명
   String get description {
     switch (this) {
@@ -39,16 +39,16 @@ extension QuizLevelExtension on QuizLevel {
         return '어려운 시간도 척척!';
     }
   }
-  
+
   /// 레벨 번호
   int get number => index + 1;
-  
+
   /// 다음 레벨
   QuizLevel? get next {
     if (this == QuizLevel.level5) return null;
     return QuizLevel.values[index + 1];
   }
-  
+
   /// 이전 레벨
   QuizLevel? get previous {
     if (this == QuizLevel.level1) return null;
@@ -61,19 +61,15 @@ class QuizQuestion {
   final int hour;
   final int minute;
   final QuizLevel level;
-  
-  QuizQuestion({
-    required this.hour,
-    required this.minute,
-    required this.level,
-  });
-  
+
+  QuizQuestion({required this.hour, required this.minute, required this.level});
+
   /// 레벨에 맞는 랜덤 문제 생성
   factory QuizQuestion.random(QuizLevel level) {
     final random = DateTime.now().millisecondsSinceEpoch;
     int hour = (random % 12);
     int minute;
-    
+
     switch (level) {
       case QuizLevel.level1:
         // 정각만
@@ -96,13 +92,16 @@ class QuizQuestion {
         minute = 50 + (random % 10);
         break;
     }
-    
+
     return QuizQuestion(hour: hour, minute: minute, level: level);
   }
-  
+
   /// 정답 텍스트
   String get answerText {
     final h = hour == 0 ? 12 : hour;
+    if (minute == 0) {
+      return '$h시';
+    }
     return '$h시 $minute분';
   }
 }
