@@ -193,14 +193,18 @@ class _RewardScreenState extends State<RewardScreen> {
       future: AdService.getRemainingRewardedAds(),
       builder: (context, snapshot) {
         final remaining = snapshot.data ?? 0;
+        final canWatch = remaining > 0;
 
         return Container(
           margin: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           child: ElevatedButton(
-            onPressed: remaining > 0 ? _watchRewardedAd : null,
+            onPressed: canWatch ? _watchRewardedAd : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.warning,
-              padding: EdgeInsets.symmetric(vertical: 16),
+              disabledBackgroundColor: AppColors.textLight.withValues(
+                alpha: 0.18,
+              ),
+              padding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
@@ -208,16 +212,43 @@ class _RewardScreenState extends State<RewardScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.play_circle_filled, size: 28, color: Colors.white),
+                Icon(
+                  canWatch
+                      ? Icons.play_circle_filled
+                      : Icons.check_circle_rounded,
+                  size: 28,
+                  color: Colors.white,
+                ),
                 SizedBox(width: 12),
-                Text(
-                  remaining > 0
-                      ? '보호자와 광고 보고 별 10개 받기 ($remaining/3)'
-                      : '오늘 모두 시청했어요!',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+                Flexible(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        canWatch ? '보호자와 함께 광고 보기' : '오늘 별 보상 끝!',
+                        style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      SizedBox(height: 2),
+                      Text(
+                        canWatch
+                            ? '별 10개 · 오늘 $remaining회 남음'
+                            : '내일 다시 받을 수 있어요',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.white.withValues(alpha: 0.86),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -287,7 +318,11 @@ class _RewardScreenState extends State<RewardScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('보호자와 함께 보기'),
-        content: Text('보상형 광고가 재생됩니다. 어린이가 혼자 광고를 누르지 않도록 보호자와 함께 진행해주세요.'),
+        content: Text(
+          '보상형 광고가 재생됩니다. 광고를 끝까지 보면 별 10개가 지급돼요.\n\n'
+          '어린이가 혼자 광고를 누르지 않도록 보호자와 함께 진행해주세요.',
+          style: TextStyle(height: 1.45),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -760,7 +795,7 @@ class _RewardScreenState extends State<RewardScreen> {
 
   /// 별로 여는 테마 그리드
   Widget _buildStoreGrid() {
-    // 테스트를 위해 리버스해서 최신 추가된 테마가 상단에 보이도록 임시 처리
+    // 최근 추가된 테마가 상단에 보이도록 정렬
     final premiumThemes = ClockThemeList.premiumThemes.reversed.toList();
 
     return GridView.builder(
@@ -781,7 +816,19 @@ class _RewardScreenState extends State<RewardScreen> {
           onTap: () => _showPurchaseDialog(theme, isUnlocked, canAfford),
           child: Container(
             decoration: BoxDecoration(
-              gradient: ClockThemeList.candy.backgroundGradient,
+              color: theme.backgroundGradient == null
+                  ? theme.backgroundColor
+                  : null,
+              gradient:
+                  theme.backgroundGradient ??
+                  LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      theme.backgroundColor,
+                      Colors.white.withValues(alpha: 0.82),
+                    ],
+                  ),
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
@@ -855,7 +902,7 @@ class _RewardScreenState extends State<RewardScreen> {
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: ClockThemeList.candy.hourHandColor,
+                            color: AppColors.textDark,
                           ),
                           textAlign: TextAlign.center,
                         ),

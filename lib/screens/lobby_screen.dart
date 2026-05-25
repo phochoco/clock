@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../utils/colors.dart';
@@ -17,12 +18,18 @@ class LobbyScreen extends StatefulWidget {
   State<LobbyScreen> createState() => _LobbyScreenState();
 }
 
-class _LobbyScreenState extends State<LobbyScreen> {
+class _LobbyScreenState extends State<LobbyScreen>
+    with SingleTickerProviderStateMixin {
   BannerAd? _bannerAd;
+  late final AnimationController _motionController;
 
   @override
   void initState() {
     super.initState();
+    _motionController = AnimationController(
+      vsync: this,
+      duration: Duration(seconds: 8),
+    )..repeat();
     _loadBannerAd();
   }
 
@@ -45,6 +52,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
 
   @override
   void dispose() {
+    _motionController.dispose();
     _bannerAd?.dispose();
     super.dispose();
   }
@@ -86,6 +94,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               context,
                               icon: Icons.school_rounded,
                               label: '시계 배우기',
+                              subtitle: '바늘을 돌려 시간 찾기',
                               color: AppColors.minuteBlue,
                               onTap: () {
                                 Navigator.push(
@@ -104,6 +113,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               context,
                               icon: Icons.videogame_asset_rounded,
                               label: '게임 모드',
+                              subtitle: '퀴즈로 별 모으기',
                               color: AppColors.hourRed,
                               onTap: () {
                                 Navigator.push(
@@ -122,6 +132,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
                               context,
                               icon: Icons.diamond_rounded,
                               label: '내 보물상자',
+                              subtitle: '테마 꾸미기와 별 모음',
                               color: AppColors.warning, // Golden Amber
                               onTap: () {
                                 Navigator.push(
@@ -199,7 +210,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         content: Text(
           '학습 기록과 별, 선택한 테마는 기기에만 저장됩니다.\n\n'
           '광고는 Google AdMob을 사용하며 어린이 대상 및 일반 등급 광고 설정을 적용합니다. '
-          '보상형 광고는 보호자와 함께 이용해주세요.\n\n'
+          '보상형 광고는 보호자가 확인한 뒤 함께 이용해주세요.\n\n'
           '문의: yeajunss@naver.com',
           style: TextStyle(height: 1.45),
         ),
@@ -216,26 +227,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   Widget _buildTitle() {
     return Column(
       children: [
-        // 아이콘 (그림자 효과 적용)
-        Container(
-          padding: EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.8),
-            shape: BoxShape.circle,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.minuteBlue.withValues(alpha: 0.15),
-                blurRadius: 20,
-                offset: Offset(0, 8),
-              ),
-            ],
-          ),
-          child: Icon(
-            Icons.schedule_rounded,
-            size: 64,
-            color: AppColors.textDark,
-          ),
-        ),
+        _buildAnimatedTitleIcon(),
         SizedBox(height: 24),
 
         // 프리미엄 타이포그래피 앱 타이틀
@@ -252,7 +244,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
         SizedBox(height: 8),
 
         Text(
-          '신나는 시계 모험 출발!',
+          '바늘을 돌려 시간 보물을 찾아요',
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w500,
@@ -264,17 +256,109 @@ class _LobbyScreenState extends State<LobbyScreen> {
     );
   }
 
+  Widget _buildAnimatedTitleIcon() {
+    return AnimatedBuilder(
+      animation: _motionController,
+      builder: (context, child) {
+        final t = _motionController.value;
+        return SizedBox(
+          width: 132,
+          height: 116,
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
+            children: [
+              _buildFloatingSparkle(
+                t,
+                phase: 0.05,
+                radius: 44,
+                angle: -0.9,
+                color: AppColors.warning,
+                size: 20,
+              ),
+              _buildFloatingSparkle(
+                t,
+                phase: 0.35,
+                radius: 52,
+                angle: 0.55,
+                color: AppColors.minuteBlue,
+                size: 18,
+              ),
+              _buildFloatingSparkle(
+                t,
+                phase: 0.65,
+                radius: 48,
+                angle: 2.55,
+                color: AppColors.hourRed,
+                size: 16,
+              ),
+              Transform.scale(
+                scale: 1 + math.sin(t * math.pi * 2) * 0.025,
+                child: Container(
+                  padding: EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.86),
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.minuteBlue.withValues(alpha: 0.18),
+                        blurRadius: 22,
+                        offset: Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Icon(
+                    Icons.schedule_rounded,
+                    size: 64,
+                    color: AppColors.textDark,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildFloatingSparkle(
+    double t, {
+    required double phase,
+    required double radius,
+    required double angle,
+    required Color color,
+    required double size,
+  }) {
+    final wave = math.sin((t + phase) * math.pi * 2);
+    final dx = math.cos(angle + t * math.pi * 0.35) * radius;
+    final dy = math.sin(angle + t * math.pi * 0.35) * radius * 0.68;
+
+    return Transform.translate(
+      offset: Offset(dx, dy),
+      child: Opacity(
+        opacity: 0.55 + wave.abs() * 0.35,
+        child: Transform.scale(
+          scale: 0.88 + wave.abs() * 0.18,
+          child: Icon(Icons.auto_awesome_rounded, color: color, size: size),
+        ),
+      ),
+    );
+  }
+
   Widget _buildMainGlassButton(
     BuildContext context, {
     required IconData icon,
     required String label,
+    required String subtitle,
     required Color color,
     required VoidCallback onTap,
   }) {
+    final buttonWidth = math.min(MediaQuery.of(context).size.width - 48, 340.0);
+
     return GlassContainer(
       onTap: onTap,
-      width: 300,
-      height: 90,
+      width: buttonWidth,
+      height: 98,
       padding: EdgeInsets.symmetric(horizontal: 24),
       borderRadius: 28,
       opacity: 0.35, // 기존 버튼보다 살짝 불투명하게 (가독성)
@@ -292,14 +376,32 @@ class _LobbyScreenState extends State<LobbyScreen> {
           ),
           SizedBox(width: 20),
           Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0,
-                color: AppColors.textDark,
-              ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 25,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0,
+                    color: AppColors.textLight,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
           ),
           // 화살표 지시자
