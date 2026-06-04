@@ -43,9 +43,8 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
         .toDouble();
 
     return Scaffold(
-      backgroundColor: AppColors.watchBlack,
+      backgroundColor: AppColors.bgPrimary,
       body: MeshBackground(
-        isDark: true,
         child: SafeArea(
           child: Column(
             children: [
@@ -102,7 +101,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
           // 뒤로가기 버튼
           IconButton(
             icon: Icon(Icons.arrow_back_rounded, size: 28),
-            color: AppColors.watchText,
+            color: AppColors.textDark,
             onPressed: () => Navigator.pop(context),
           ),
 
@@ -113,7 +112,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
-                color: AppColors.watchText,
+                color: AppColors.textDark,
               ),
             ),
           ),
@@ -122,7 +121,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
             icon: Icon(
               Icons.more_horiz_rounded,
               size: 28,
-              color: AppColors.watchText,
+              color: AppColors.textDark,
             ),
             onSelected: (value) {
               setState(() {
@@ -178,9 +177,8 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 24),
       child: GlassContainer(
-        isDark: true,
-        opacity: 0.12,
-        blurRadius: 28,
+        opacity: 0.78,
+        blurRadius: 18,
         borderRadius: 28,
         padding: EdgeInsets.symmetric(horizontal: 22, vertical: 18),
         child: Row(
@@ -194,7 +192,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.watchTextMuted,
+                      color: AppColors.textLight,
                     ),
                   ),
                   SizedBox(height: 6),
@@ -218,7 +216,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
                             fontSize: 38,
                             fontWeight: FontWeight.w800,
                             height: 1,
-                            color: AppColors.watchText,
+                            color: AppColors.textDark,
                           ),
                         ),
                       ),
@@ -241,7 +239,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.w800,
-                color: AppColors.watchTextDim,
+                color: AppColors.textLight,
               ),
             ),
           ],
@@ -254,11 +252,10 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 24),
       child: GlassContainer(
-        isDark: true,
         padding: EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         borderRadius: 24,
-        opacity: 0.1,
-        blurRadius: 28,
+        opacity: 0.78,
+        blurRadius: 18,
         child: Column(
           children: [
             Row(
@@ -322,7 +319,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w800,
-              color: AppColors.watchTextMuted,
+              color: AppColors.textLight,
             ),
           ),
           SizedBox(height: 12),
@@ -392,9 +389,8 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
         height: 50,
         padding: EdgeInsets.zero, // 이중 박스 방지를 위해 내부 패딩 제거
         borderRadius: 25,
-        opacity: isPrimary ? 0.92 : 0.1,
-        isDark: !isPrimary,
-        blurRadius: 28,
+        opacity: isPrimary ? 0.92 : 0.78,
+        blurRadius: 18,
         child: Container(
           // GlassContainer 내부에 컬러 레이어를 덧씌움
           padding: EdgeInsets.symmetric(
@@ -402,7 +398,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
             vertical: 12,
           ),
           decoration: BoxDecoration(
-            color: isPrimary ? AppColors.watchText : Colors.transparent,
+            color: isPrimary ? AppColors.appleBlue : Colors.transparent,
             borderRadius: BorderRadius.circular(25),
           ),
           alignment: Alignment.center,
@@ -413,7 +409,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
               if (icon != null) ...[
                 Icon(
                   icon,
-                  color: isPrimary ? AppColors.watchBlack : AppColors.watchText,
+                  color: isPrimary ? Colors.white : AppColors.textDark,
                   size: 18,
                 ),
                 SizedBox(width: 8),
@@ -423,7 +419,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
                 style: TextStyle(
                   fontSize: isPrimary ? 16 : 14,
                   fontWeight: FontWeight.w700,
-                  color: isPrimary ? AppColors.watchBlack : AppColors.watchText,
+                  color: isPrimary ? Colors.white : AppColors.textDark,
                 ),
               ),
             ],

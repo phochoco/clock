@@ -63,9 +63,8 @@ class _LobbyScreenState extends State<LobbyScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.watchBlack,
+      backgroundColor: AppColors.bgPrimary,
       body: MeshBackground(
-        isDark: true,
         child: SafeArea(
           child: SingleChildScrollView(
             child: ConstrainedBox(
@@ -150,7 +149,6 @@ class _LobbyScreenState extends State<LobbyScreen>
                       Padding(
                         padding: const EdgeInsets.only(top: 20),
                         child: GlassContainer(
-                          isDark: true,
                           width: _bannerAd!.size.width.toDouble() + 16,
                           height: _bannerAd!.size.height.toDouble() + 16,
                           padding: EdgeInsets.zero,
@@ -185,7 +183,7 @@ class _LobbyScreenState extends State<LobbyScreen>
           tooltip: '보호자 안내',
           icon: Icon(
             Icons.shield_outlined,
-            color: AppColors.watchTextMuted,
+            color: AppColors.textLight,
             size: 24,
           ),
           onPressed: _showGuardianInfoDialog,
@@ -232,7 +230,7 @@ class _LobbyScreenState extends State<LobbyScreen>
             fontSize: 14,
             fontWeight: FontWeight.w700,
             letterSpacing: 0,
-            color: AppColors.watchTextMuted,
+            color: AppColors.textLight,
           ),
         ),
         SizedBox(height: 10),
@@ -243,7 +241,7 @@ class _LobbyScreenState extends State<LobbyScreen>
             fontSize: 48,
             fontWeight: FontWeight.w900,
             letterSpacing: 0,
-            color: AppColors.watchText,
+            color: AppColors.textDark,
           ),
         ),
 
@@ -255,7 +253,7 @@ class _LobbyScreenState extends State<LobbyScreen>
             fontSize: 17,
             fontWeight: FontWeight.w600,
             letterSpacing: 0,
-            color: AppColors.watchTextMuted,
+            color: AppColors.textLight,
           ),
         ),
         SizedBox(height: 26),
@@ -304,9 +302,8 @@ class _LobbyScreenState extends State<LobbyScreen>
       height: 76,
       padding: EdgeInsets.symmetric(horizontal: 18),
       borderRadius: 28,
-      opacity: 0.13,
-      blurRadius: 26,
-      isDark: true,
+      opacity: 0.76,
+      blurRadius: 18,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
@@ -331,7 +328,7 @@ class _LobbyScreenState extends State<LobbyScreen>
                     fontSize: 19,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0,
-                    color: AppColors.watchText,
+                    color: AppColors.textDark,
                   ),
                 ),
                 SizedBox(height: 3),
@@ -341,7 +338,7 @@ class _LobbyScreenState extends State<LobbyScreen>
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0,
-                    color: AppColors.watchTextMuted,
+                    color: AppColors.textLight,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -351,7 +348,7 @@ class _LobbyScreenState extends State<LobbyScreen>
           ),
           Icon(
             Icons.chevron_right_rounded,
-            color: AppColors.watchTextDim,
+            color: AppColors.textLight.withValues(alpha: 0.72),
             size: 26,
           ),
         ],
