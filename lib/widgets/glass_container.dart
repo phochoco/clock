@@ -31,9 +31,9 @@ class GlassContainer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // 배경 테두리와 색상
-    final Color bgColor = isDark ? Colors.black : Colors.white;
-    final Color borderColor = (isDark ? Colors.white : Colors.white).withValues(
-      alpha: isDark ? 0.1 : 0.4,
+    final Color bgColor = isDark ? const Color(0xFF11141B) : Colors.white;
+    final Color borderColor = Colors.white.withValues(
+      alpha: isDark ? 0.12 : 0.4,
     );
 
     Widget container = Container(
@@ -46,9 +46,9 @@ class GlassContainer extends StatelessWidget {
         border: Border.all(color: borderColor, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.3 : 0.05),
-            blurRadius: 30,
-            offset: Offset(0, 10),
+            color: Colors.black.withValues(alpha: isDark ? 0.36 : 0.05),
+            blurRadius: isDark ? 42 : 30,
+            offset: Offset(0, isDark ? 18 : 10),
           ),
         ],
       ),

@@ -4,7 +4,6 @@ import '../models/clock_theme.dart';
 import '../services/theme_service.dart';
 import '../utils/colors.dart';
 import '../widgets/analog_clock.dart';
-import '../widgets/digital_display.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/mesh_background.dart';
 
@@ -44,22 +43,20 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
         .toDouble();
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: AppColors.watchBlack,
       body: MeshBackground(
+        isDark: true,
         child: SafeArea(
           child: Column(
             children: [
-              // 상단 바
               _buildTopBar(),
 
-              SizedBox(height: 20),
+              SizedBox(height: 8),
 
-              // 디지털 시계 표시
-              if (_showDigital) DigitalDisplay(time: _currentTime),
+              if (_showDigital) _buildTimeReadout(),
 
-              SizedBox(height: 20),
+              SizedBox(height: 14),
 
-              // 시계
               Expanded(
                 child: Center(
                   child: SizedBox(
@@ -75,23 +72,21 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
                                 _currentTime = time;
                               });
                             },
-                            showGuideline: true,
+                            showGuideline: false,
                             showMinuteNumbers: _showMinuteNumbers,
-                            theme: _theme,
+                            theme: ClockThemeList.basic,
                           ),
                   ),
                 ),
               ),
 
-              // 설명 텍스트
               _buildHelpText(),
 
-              SizedBox(height: 20),
+              SizedBox(height: 16),
 
-              // 컨트롤 버튼
               _buildControls(),
 
-              SizedBox(height: 20),
+              SizedBox(height: 18),
             ],
           ),
         ),
@@ -107,7 +102,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
           // 뒤로가기 버튼
           IconButton(
             icon: Icon(Icons.arrow_back_rounded, size: 28),
-            color: AppColors.textDark,
+            color: AppColors.watchText,
             onPressed: () => Navigator.pop(context),
           ),
 
@@ -116,19 +111,18 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
               '시계 배우기',
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textDark,
+                fontSize: 18,
+                fontWeight: FontWeight.w800,
+                color: AppColors.watchText,
               ),
             ),
           ),
 
-          // 설정 버튼
           PopupMenuButton<String>(
             icon: Icon(
-              Icons.settings_rounded,
+              Icons.more_horiz_rounded,
               size: 28,
-              color: AppColors.textDark,
+              color: AppColors.watchText,
             ),
             onSelected: (value) {
               setState(() {
@@ -148,7 +142,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
                       _showDigital
                           ? Icons.check_box
                           : Icons.check_box_outline_blank,
-                      color: AppColors.minuteBlue,
+                      color: AppColors.appleBlue,
                     ),
                     SizedBox(width: 8),
                     Text('디지털 시계 표시'),
@@ -163,7 +157,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
                       _showMinuteNumbers
                           ? Icons.check_box
                           : Icons.check_box_outline_blank,
-                      color: AppColors.minuteBlue,
+                      color: AppColors.appleBlue,
                     ),
                     SizedBox(width: 8),
                     Text('분 숫자 표시'),
@@ -177,13 +171,94 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
     );
   }
 
+  Widget _buildTimeReadout() {
+    final hour = _currentTime.hour12.toString().padLeft(2, '0');
+    final minute = _currentTime.minute.toString().padLeft(2, '0');
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 24),
+      child: GlassContainer(
+        isDark: true,
+        opacity: 0.12,
+        blurRadius: 28,
+        borderRadius: 28,
+        padding: EdgeInsets.symmetric(horizontal: 22, vertical: 18),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '목표 시간',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.watchTextMuted,
+                    ),
+                  ),
+                  SizedBox(height: 6),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        hour,
+                        style: TextStyle(
+                          fontSize: 42,
+                          fontWeight: FontWeight.w900,
+                          height: 1,
+                          color: AppColors.appleRed,
+                        ),
+                      ),
+                      Padding(
+                        padding: EdgeInsets.symmetric(horizontal: 6),
+                        child: Text(
+                          ':',
+                          style: TextStyle(
+                            fontSize: 38,
+                            fontWeight: FontWeight.w800,
+                            height: 1,
+                            color: AppColors.watchText,
+                          ),
+                        ),
+                      ),
+                      Text(
+                        minute,
+                        style: TextStyle(
+                          fontSize: 42,
+                          fontWeight: FontWeight.w900,
+                          height: 1,
+                          color: AppColors.appleBlue,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              _currentTime.isAM ? 'AM' : 'PM',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: AppColors.watchTextDim,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildHelpText() {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 24),
       child: GlassContainer(
-        padding: EdgeInsets.all(16),
-        borderRadius: 20,
-        opacity: 0.5,
+        isDark: true,
+        padding: EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        borderRadius: 24,
+        opacity: 0.1,
+        blurRadius: 28,
         child: Column(
           children: [
             Row(
@@ -193,7 +268,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: AppColors.hourRed,
+                    color: AppColors.appleRed,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -201,9 +276,9 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
                 Text(
                   '짧은 바늘 = 시간',
                   style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.hourRed,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.appleRed,
                   ),
                 ),
               ],
@@ -216,7 +291,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
                   width: 60,
                   height: 3,
                   decoration: BoxDecoration(
-                    color: AppColors.minuteBlue,
+                    color: AppColors.appleBlue,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -224,9 +299,9 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
                 Text(
                   '긴 바늘 = 분',
                   style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.minuteBlue,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.appleBlue,
                   ),
                 ),
               ],
@@ -243,11 +318,11 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
       child: Column(
         children: [
           Text(
-            '빠른 시간 설정',
+            '빠른 설정',
             style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textDark,
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+              color: AppColors.watchTextMuted,
             ),
           ),
           SizedBox(height: 12),
@@ -316,8 +391,10 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
         onTap: onTap,
         height: 50,
         padding: EdgeInsets.zero, // 이중 박스 방지를 위해 내부 패딩 제거
-        borderRadius: 16,
-        opacity: isPrimary ? 0.3 : 0.6, // 투명도 조절
+        borderRadius: 25,
+        opacity: isPrimary ? 0.92 : 0.1,
+        isDark: !isPrimary,
+        blurRadius: 28,
         child: Container(
           // GlassContainer 내부에 컬러 레이어를 덧씌움
           padding: EdgeInsets.symmetric(
@@ -325,10 +402,8 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
             vertical: 12,
           ),
           decoration: BoxDecoration(
-            color: isPrimary
-                ? AppColors.hourRed.withValues(alpha: 0.9)
-                : Colors.transparent,
-            borderRadius: BorderRadius.circular(16),
+            color: isPrimary ? AppColors.watchText : Colors.transparent,
+            borderRadius: BorderRadius.circular(25),
           ),
           alignment: Alignment.center,
           child: Row(
@@ -338,7 +413,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
               if (icon != null) ...[
                 Icon(
                   icon,
-                  color: isPrimary ? Colors.white : AppColors.textDark,
+                  color: isPrimary ? AppColors.watchBlack : AppColors.watchText,
                   size: 18,
                 ),
                 SizedBox(width: 8),
@@ -348,7 +423,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
                 style: TextStyle(
                   fontSize: isPrimary ? 16 : 14,
                   fontWeight: FontWeight.w700,
-                  color: isPrimary ? Colors.white : AppColors.textDark,
+                  color: isPrimary ? AppColors.watchBlack : AppColors.watchText,
                 ),
               ),
             ],

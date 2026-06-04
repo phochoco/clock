@@ -28,7 +28,7 @@ class _RewardScreenState extends State<RewardScreen> {
   int _totalStars = 0; // 별 개수 추가
   String _selectedThemeId = 'basic_clock';
   bool _isLoading = true;
-  int _selectedTabIndex = 0; // 0: 보물상자, 1: 테마 열기
+  int _selectedTabIndex = 0; // 0: 보유 페이스, 1: 새 페이스
 
   @override
   void initState() {
@@ -56,8 +56,9 @@ class _RewardScreenState extends State<RewardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: AppColors.watchBlack,
       body: MeshBackground(
+        isDark: true,
         child: SafeArea(
           child: _isLoading
               ? Center(child: CircularProgressIndicator())
@@ -89,15 +90,15 @@ class _RewardScreenState extends State<RewardScreen> {
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           IconButton(
-            icon: Icon(Icons.arrow_back, color: AppColors.textDark),
+            icon: Icon(Icons.arrow_back, color: AppColors.watchText),
             onPressed: () => Navigator.pop(context),
           ),
           Text(
-            '내 보물상자',
+            '컬렉션',
             style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textDark,
+              fontSize: 22,
+              fontWeight: FontWeight.w800,
+              color: AppColors.watchText,
             ),
           ),
           SizedBox(width: 48), // 뒤로가기 버튼과 균형 맞추기
@@ -115,9 +116,11 @@ class _RewardScreenState extends State<RewardScreen> {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 24),
       child: GlassContainer(
+        isDark: true,
         padding: EdgeInsets.all(20),
         borderRadius: 20,
-        opacity: 0.8,
+        opacity: 0.12,
+        blurRadius: 28,
         child: Column(
           children: [
             // 기존 3가지 메인 스탯
@@ -132,14 +135,14 @@ class _RewardScreenState extends State<RewardScreen> {
                 ),
                 _buildStatItem(
                   Icons.star_rounded,
-                  Colors.amber,
+                  AppColors.appleYellow,
                   '별',
                   '$_totalStars',
                 ),
                 _buildStatItem(
-                  Icons.redeem_rounded,
-                  Colors.redAccent,
-                  '보상',
+                  Icons.watch_rounded,
+                  AppColors.appleBlue,
+                  '페이스',
                   '$_unlockedRewardCount',
                 ),
               ],
@@ -150,7 +153,7 @@ class _RewardScreenState extends State<RewardScreen> {
               children: [
                 Icon(
                   Icons.collections_bookmark_rounded,
-                  color: AppColors.secondary,
+                  color: AppColors.watchTextMuted,
                   size: 24,
                 ),
                 SizedBox(width: 8),
@@ -158,7 +161,7 @@ class _RewardScreenState extends State<RewardScreen> {
                   '도감 달성률',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
+                    color: AppColors.watchText,
                   ),
                 ),
                 Spacer(),
@@ -166,7 +169,7 @@ class _RewardScreenState extends State<RewardScreen> {
                   '$_unlockedRewardCount / $totalThemes ( ${(progress * 100).toInt()}% )',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: AppColors.secondary,
+                    color: AppColors.watchTextMuted,
                   ),
                 ),
               ],
@@ -177,8 +180,8 @@ class _RewardScreenState extends State<RewardScreen> {
               child: LinearProgressIndicator(
                 value: progress,
                 minHeight: 12,
-                backgroundColor: Colors.grey[300],
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.secondary),
+                backgroundColor: AppColors.watchLine,
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.appleBlue),
               ),
             ),
           ],
@@ -200,8 +203,8 @@ class _RewardScreenState extends State<RewardScreen> {
           child: ElevatedButton(
             onPressed: canWatch ? _watchRewardedAd : null,
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.warning,
-              disabledBackgroundColor: AppColors.textLight.withValues(
+              backgroundColor: AppColors.appleYellow,
+              disabledBackgroundColor: AppColors.watchLine.withValues(
                 alpha: 0.18,
               ),
               padding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
@@ -217,7 +220,7 @@ class _RewardScreenState extends State<RewardScreen> {
                       ? Icons.play_circle_filled
                       : Icons.check_circle_rounded,
                   size: 28,
-                  color: Colors.white,
+                  color: AppColors.watchBlack,
                 ),
                 SizedBox(width: 12),
                 Flexible(
@@ -226,11 +229,11 @@ class _RewardScreenState extends State<RewardScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        canWatch ? '보호자와 함께 광고 보기' : '오늘 별 보상 끝!',
+                        canWatch ? '보호자와 함께 별 받기' : '오늘 별 받기 완료',
                         style: TextStyle(
                           fontSize: 17,
                           fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                          color: AppColors.watchBlack,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -243,7 +246,7 @@ class _RewardScreenState extends State<RewardScreen> {
                         style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
-                          color: Colors.white.withValues(alpha: 0.86),
+                          color: AppColors.watchBlack.withValues(alpha: 0.72),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -348,14 +351,17 @@ class _RewardScreenState extends State<RewardScreen> {
       children: [
         Icon(icon, size: 36, color: color),
         SizedBox(height: 8),
-        Text(label, style: TextStyle(fontSize: 14, color: AppColors.textLight)),
+        Text(
+          label,
+          style: TextStyle(fontSize: 14, color: AppColors.watchTextMuted),
+        ),
         SizedBox(height: 4),
         Text(
           value,
           style: TextStyle(
             fontSize: 24,
             fontWeight: FontWeight.bold,
-            color: AppColors.textDark,
+            color: AppColors.watchText,
           ),
         ),
       ],
@@ -406,12 +412,14 @@ class _RewardScreenState extends State<RewardScreen> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(20),
                     border: isSelected
-                        ? Border.all(color: AppColors.warning, width: 3)
+                        ? Border.all(color: AppColors.appleYellow, width: 2)
                         : null,
                   ),
                   child: GlassContainer(
-                    opacity: unlocked ? 0.3 : 0.8,
-                    borderRadius: 20,
+                    isDark: true,
+                    opacity: unlocked ? 0.12 : 0.08,
+                    blurRadius: 28,
+                    borderRadius: 28,
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -421,7 +429,7 @@ class _RewardScreenState extends State<RewardScreen> {
                             : Icon(
                                 Icons.lock_rounded,
                                 size: 60,
-                                color: Colors.grey[400],
+                                color: AppColors.watchTextDim,
                               ),
                         SizedBox(height: 16),
                         // 테마 이름
@@ -431,8 +439,8 @@ class _RewardScreenState extends State<RewardScreen> {
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
                             color: unlocked
-                                ? AppColors.textDark
-                                : Colors.grey[500],
+                                ? AppColors.watchText
+                                : AppColors.watchTextDim,
                           ),
                         ),
                         // 희귀도 뱃지 또는 잠김 표시
@@ -444,7 +452,7 @@ class _RewardScreenState extends State<RewardScreen> {
                             '잠김',
                             style: TextStyle(
                               fontSize: 12,
-                              color: Colors.grey[500],
+                              color: AppColors.watchTextDim,
                             ),
                           ),
 
@@ -456,7 +464,7 @@ class _RewardScreenState extends State<RewardScreen> {
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
-                              color: AppColors.warning,
+                              color: AppColors.appleYellow,
                             ),
                           ),
                         ],
@@ -698,9 +706,11 @@ class _RewardScreenState extends State<RewardScreen> {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 24),
       child: GlassContainer(
+        isDark: true,
         padding: EdgeInsets.zero,
         borderRadius: 25,
-        opacity: 0.7,
+        opacity: 0.12,
+        blurRadius: 28,
         child: Row(
           children: [
             Expanded(
@@ -712,8 +722,8 @@ class _RewardScreenState extends State<RewardScreen> {
                     gradient: _selectedTabIndex == 0
                         ? LinearGradient(
                             colors: [
-                              AppColors.warning,
-                              AppColors.warning.withValues(alpha: 0.7),
+                              AppColors.watchText,
+                              AppColors.watchText.withValues(alpha: 0.82),
                             ],
                           )
                         : null,
@@ -726,18 +736,18 @@ class _RewardScreenState extends State<RewardScreen> {
                         Icons.redeem_rounded,
                         size: 20,
                         color: _selectedTabIndex == 0
-                            ? Colors.white
-                            : AppColors.textDark.withValues(alpha: 0.4),
+                            ? AppColors.watchBlack
+                            : AppColors.watchTextMuted,
                       ),
                       SizedBox(width: 8),
                       Text(
-                        '보물상자',
+                        '보유 페이스',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: _selectedTabIndex == 0
-                              ? Colors.white
-                              : AppColors.textDark.withValues(alpha: 0.4),
+                              ? AppColors.watchBlack
+                              : AppColors.watchTextMuted,
                         ),
                       ),
                     ],
@@ -754,8 +764,8 @@ class _RewardScreenState extends State<RewardScreen> {
                     gradient: _selectedTabIndex == 1
                         ? LinearGradient(
                             colors: [
-                              AppColors.minuteBlue,
-                              AppColors.minuteBlue.withValues(alpha: 0.7),
+                              AppColors.appleBlue,
+                              AppColors.appleBlue.withValues(alpha: 0.7),
                             ],
                           )
                         : null,
@@ -769,17 +779,17 @@ class _RewardScreenState extends State<RewardScreen> {
                         size: 20,
                         color: _selectedTabIndex == 1
                             ? Colors.white
-                            : AppColors.textDark.withValues(alpha: 0.4),
+                            : AppColors.watchTextMuted,
                       ),
                       SizedBox(width: 8),
                       Text(
-                        '테마 열기',
+                        '새 페이스',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: _selectedTabIndex == 1
                               ? Colors.white
-                              : AppColors.textDark.withValues(alpha: 0.4),
+                              : AppColors.watchTextMuted,
                         ),
                       ),
                     ],
@@ -816,30 +826,21 @@ class _RewardScreenState extends State<RewardScreen> {
           onTap: () => _showPurchaseDialog(theme, isUnlocked, canAfford),
           child: Container(
             decoration: BoxDecoration(
-              color: theme.backgroundGradient == null
-                  ? theme.backgroundColor
-                  : null,
-              gradient:
-                  theme.backgroundGradient ??
-                  LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      theme.backgroundColor,
-                      Colors.white.withValues(alpha: 0.82),
-                    ],
-                  ),
-              borderRadius: BorderRadius.circular(20),
+              color: AppColors.watchSurface.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(28),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.1),
-                  blurRadius: 10,
-                  offset: Offset(0, 4),
+                  color: Colors.black.withValues(alpha: 0.34),
+                  blurRadius: 26,
+                  offset: Offset(0, 14),
                 ),
               ],
               border: isUnlocked
-                  ? Border.all(color: AppColors.success, width: 3)
-                  : null,
+                  ? Border.all(color: AppColors.watchGreen, width: 2)
+                  : Border.all(
+                      color: Colors.white.withValues(alpha: 0.08),
+                      width: 1,
+                    ),
             ),
             child: Stack(
               children: [
@@ -900,9 +901,9 @@ class _RewardScreenState extends State<RewardScreen> {
                         Text(
                           theme.name,
                           style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textDark,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            color: AppColors.watchText,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -916,7 +917,7 @@ class _RewardScreenState extends State<RewardScreen> {
                             ),
                             decoration: BoxDecoration(
                               color: AppColors.success,
-                              borderRadius: BorderRadius.circular(12),
+                              borderRadius: BorderRadius.circular(14),
                             ),
                             child: Text(
                               '보유 중',
@@ -934,9 +935,9 @@ class _RewardScreenState extends State<RewardScreen> {
                             ),
                             decoration: BoxDecoration(
                               color: canAfford
-                                  ? AppColors.warning
-                                  : Colors.grey,
-                              borderRadius: BorderRadius.circular(12),
+                                  ? AppColors.appleYellow
+                                  : AppColors.watchLine,
+                              borderRadius: BorderRadius.circular(14),
                             ),
                             child: Row(
                               mainAxisSize: MainAxisSize.min,
@@ -1277,7 +1278,7 @@ class _RewardScreenState extends State<RewardScreen> {
                             ? () => Navigator.pop(context)
                             : null,
                         child: Text(
-                          '보물상자에 넣기',
+                          '컬렉션에 넣기',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,

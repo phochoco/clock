@@ -34,4 +34,17 @@ class AppColors {
   // 글래스모피즘 표면 색상
   static const Color glassWhite = Color(0x99FFFFFF); // 반투명 화이트 (60%)
   static const Color glassDark = Color(0x40000000); // 반투명 블랙 (25%)
+
+  // Apple Watch inspired surfaces
+  static const Color watchBlack = Color(0xFF020307);
+  static const Color watchSurface = Color(0xFF11141B);
+  static const Color watchSurfaceElevated = Color(0xFF1A1D26);
+  static const Color watchText = Color(0xFFF5F7FA);
+  static const Color watchTextMuted = Color(0xFF9BA3AF);
+  static const Color watchTextDim = Color(0xFF626A78);
+  static const Color watchLine = Color(0xFF2C313A);
+  static const Color watchGreen = Color(0xFF30D158);
+  static const Color appleBlue = Color(0xFF0A84FF);
+  static const Color appleRed = Color(0xFFFF453A);
+  static const Color appleYellow = Color(0xFFFFD60A);
 }

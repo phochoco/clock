@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import '../utils/colors.dart';
 
@@ -36,79 +35,54 @@ class _MeshBackgroundState extends State<MeshBackground>
 
   @override
   Widget build(BuildContext context) {
+    final baseGradient = widget.isDark
+        ? LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.watchBlack,
+              AppColors.bgDarkPrimary,
+              AppColors.watchSurface,
+            ],
+          )
+        : LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              AppColors.bgPrimary,
+              AppColors.bgSecondary,
+              AppColors.bgPrimary,
+            ],
+          );
+
     return Stack(
       children: [
-        // 1. 기본 배경색
-        Container(
-          color: widget.isDark ? AppColors.bgDarkPrimary : AppColors.bgPrimary,
-        ),
-
-        // 2. 움직이는 그라데이션 오로라 1
+        Container(decoration: BoxDecoration(gradient: baseGradient)),
         AnimatedBuilder(
           animation: _controller,
-          builder: (context, child) {
-            return Positioned(
-              top: -100 + (_controller.value * 50),
-              left: -50 + (sin(_controller.value * pi) * 50),
-              child: _buildBlurOrb(
-                widget.isDark
-                    ? AppColors.bgDarkSecondary
-                    : AppColors.bgSecondary,
-                300,
+          builder: (context, child) => Opacity(
+            opacity: widget.isDark ? 0.16 : 0.22,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.white.withValues(alpha: widget.isDark ? 0.05 : 0.55),
+                    Colors.transparent,
+                    (widget.isDark ? AppColors.appleBlue : AppColors.bgAccent1)
+                        .withValues(alpha: 0.08 + (_controller.value * 0.04)),
+                  ],
+                  stops: const [0, 0.48, 1],
+                ),
               ),
-            );
-          },
-        ),
-
-        // 3. 움직이는 그라데이션 오로라 2
-        AnimatedBuilder(
-          animation: _controller,
-          builder: (context, child) {
-            return Positioned(
-              bottom: -50 - (_controller.value * 30),
-              right: -100 + (cos(_controller.value * pi) * 60),
-              child: _buildBlurOrb(
-                widget.isDark ? AppColors.bgDarkAccent1 : AppColors.bgAccent1,
-                350,
-              ),
-            );
-          },
-        ),
-
-        // 4. 움직이는 그라데이션 오로라 3
-        if (!widget.isDark)
-          AnimatedBuilder(
-            animation: _controller,
-            builder: (context, child) {
-              return Positioned(
-                top: MediaQuery.of(context).size.height * 0.3,
-                right: -50 - (_controller.value * 20),
-                child: _buildBlurOrb(AppColors.bgAccent2, 250),
-              );
-            },
+            ),
           ),
+        ),
 
         // 실제 컨텐츠
         Positioned.fill(child: widget.child),
       ],
-    );
-  }
-
-  Widget _buildBlurOrb(Color color, double size) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color.withValues(alpha: 0.6),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.5),
-            blurRadius: 100, // 부드럽게 퍼지는 효과
-            spreadRadius: 50,
-          ),
-        ],
-      ),
     );
   }
 }

@@ -1,8 +1,11 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../models/clock_theme.dart';
+import '../models/clock_time.dart';
 import '../utils/colors.dart';
 import '../services/ad_service.dart';
+import '../widgets/analog_clock.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/mesh_background.dart';
 import 'playground_screen.dart';
@@ -60,8 +63,9 @@ class _LobbyScreenState extends State<LobbyScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: AppColors.watchBlack,
       body: MeshBackground(
+        isDark: true,
         child: SafeArea(
           child: SingleChildScrollView(
             child: ConstrainedBox(
@@ -76,26 +80,21 @@ class _LobbyScreenState extends State<LobbyScreen>
                 child: Column(
                   children: [
                     _buildGuardianInfoButton(),
-                    SizedBox(height: 20),
+                    SizedBox(height: 8),
 
-                    // 프리미엄 타이틀
                     _buildTitle(),
 
-                    SizedBox(height: 50),
-
-                    // 메인 글래스모피즘 버튼들
                     Expanded(
                       child: Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            // 학습 모드 버튼
                             _buildMainGlassButton(
                               context,
-                              icon: Icons.school_rounded,
+                              icon: Icons.schedule_rounded,
                               label: '시계 배우기',
-                              subtitle: '바늘을 돌려 시간 찾기',
-                              color: AppColors.minuteBlue,
+                              subtitle: '바늘을 맞춰 시간을 익혀요',
+                              color: AppColors.appleBlue,
                               onTap: () {
                                 Navigator.push(
                                   context,
@@ -106,15 +105,14 @@ class _LobbyScreenState extends State<LobbyScreen>
                               },
                             ),
 
-                            SizedBox(height: 30),
+                            SizedBox(height: 14),
 
-                            // 게임 모드 버튼
                             _buildMainGlassButton(
                               context,
-                              icon: Icons.videogame_asset_rounded,
-                              label: '게임 모드',
-                              subtitle: '퀴즈로 별 모으기',
-                              color: AppColors.hourRed,
+                              icon: Icons.bolt_rounded,
+                              label: '퀴즈',
+                              subtitle: '짧은 문제로 정확도를 높여요',
+                              color: AppColors.appleRed,
                               onTap: () {
                                 Navigator.push(
                                   context,
@@ -125,15 +123,14 @@ class _LobbyScreenState extends State<LobbyScreen>
                               },
                             ),
 
-                            SizedBox(height: 30),
+                            SizedBox(height: 14),
 
-                            // 보상방 버튼
                             _buildMainGlassButton(
                               context,
-                              icon: Icons.diamond_rounded,
-                              label: '내 보물상자',
-                              subtitle: '테마 꾸미기와 별 모음',
-                              color: AppColors.warning, // Golden Amber
+                              icon: Icons.grid_view_rounded,
+                              label: '컬렉션',
+                              subtitle: '모은 시계 페이스를 살펴봐요',
+                              color: AppColors.appleYellow,
                               onTap: () {
                                 Navigator.push(
                                   context,
@@ -153,6 +150,7 @@ class _LobbyScreenState extends State<LobbyScreen>
                       Padding(
                         padding: const EdgeInsets.only(top: 20),
                         child: GlassContainer(
+                          isDark: true,
                           width: _bannerAd!.size.width.toDouble() + 16,
                           height: _bannerAd!.size.height.toDouble() + 16,
                           padding: EdgeInsets.zero,
@@ -167,7 +165,7 @@ class _LobbyScreenState extends State<LobbyScreen>
                         ),
                       ),
 
-                    SizedBox(height: 40),
+                    SizedBox(height: 28),
                   ],
                 ),
               ),
@@ -187,8 +185,8 @@ class _LobbyScreenState extends State<LobbyScreen>
           tooltip: '보호자 안내',
           icon: Icon(
             Icons.shield_outlined,
-            color: AppColors.textLight,
-            size: 28,
+            color: AppColors.watchTextMuted,
+            size: 24,
           ),
           onPressed: _showGuardianInfoDialog,
         ),
@@ -202,7 +200,7 @@ class _LobbyScreenState extends State<LobbyScreen>
       builder: (context) => AlertDialog(
         title: Row(
           children: [
-            Icon(Icons.shield_outlined, color: AppColors.minuteBlue),
+            Icon(Icons.shield_outlined, color: AppColors.appleBlue),
             SizedBox(width: 8),
             Text('보호자 안내'),
           ],
@@ -227,31 +225,41 @@ class _LobbyScreenState extends State<LobbyScreen>
   Widget _buildTitle() {
     return Column(
       children: [
-        _buildAnimatedTitleIcon(),
-        SizedBox(height: 24),
-
-        // 프리미엄 타이포그래피 앱 타이틀
+        SizedBox(height: 8),
         Text(
-          '째깍 보물섬',
+          '오늘의 연습',
           style: TextStyle(
-            fontSize: 42,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0,
+            color: AppColors.watchTextMuted,
+          ),
+        ),
+        SizedBox(height: 10),
+
+        Text(
+          '째깍',
+          style: TextStyle(
+            fontSize: 48,
             fontWeight: FontWeight.w900,
             letterSpacing: 0,
-            color: AppColors.textDark,
+            color: AppColors.watchText,
           ),
         ),
 
-        SizedBox(height: 8),
+        SizedBox(height: 10),
 
         Text(
-          '바늘을 돌려 시간 보물을 찾아요',
+          '바늘을 맞춰 시간을 익혀요.',
           style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w500,
+            fontSize: 17,
+            fontWeight: FontWeight.w600,
             letterSpacing: 0,
-            color: AppColors.textLight,
+            color: AppColors.watchTextMuted,
           ),
         ),
+        SizedBox(height: 26),
+        _buildAnimatedTitleIcon(),
       ],
     );
   }
@@ -261,87 +269,22 @@ class _LobbyScreenState extends State<LobbyScreen>
       animation: _motionController,
       builder: (context, child) {
         final t = _motionController.value;
-        return SizedBox(
-          width: 132,
-          height: 116,
-          child: Stack(
-            clipBehavior: Clip.none,
-            alignment: Alignment.center,
-            children: [
-              _buildFloatingSparkle(
-                t,
-                phase: 0.05,
-                radius: 44,
-                angle: -0.9,
-                color: AppColors.warning,
-                size: 20,
-              ),
-              _buildFloatingSparkle(
-                t,
-                phase: 0.35,
-                radius: 52,
-                angle: 0.55,
-                color: AppColors.minuteBlue,
-                size: 18,
-              ),
-              _buildFloatingSparkle(
-                t,
-                phase: 0.65,
-                radius: 48,
-                angle: 2.55,
-                color: AppColors.hourRed,
-                size: 16,
-              ),
-              Transform.scale(
-                scale: 1 + math.sin(t * math.pi * 2) * 0.025,
-                child: Container(
-                  padding: EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.86),
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppColors.minuteBlue.withValues(alpha: 0.18),
-                        blurRadius: 22,
-                        offset: Offset(0, 8),
-                      ),
-                    ],
-                  ),
-                  child: Icon(
-                    Icons.schedule_rounded,
-                    size: 64,
-                    color: AppColors.textDark,
-                  ),
-                ),
-              ),
-            ],
+        return Transform.scale(
+          scale: 1 + math.sin(t * math.pi * 2) * 0.012,
+          child: SizedBox(
+            width: 250,
+            height: 250,
+            child: AnalogClock(
+              initialTime: ClockTime(hour: 10, minute: 10),
+              interactive: false,
+              showGuideline: false,
+              showMinuteNumbers: false,
+              notifyInitialTime: false,
+              theme: ClockThemeList.basic,
+            ),
           ),
         );
       },
-    );
-  }
-
-  Widget _buildFloatingSparkle(
-    double t, {
-    required double phase,
-    required double radius,
-    required double angle,
-    required Color color,
-    required double size,
-  }) {
-    final wave = math.sin((t + phase) * math.pi * 2);
-    final dx = math.cos(angle + t * math.pi * 0.35) * radius;
-    final dy = math.sin(angle + t * math.pi * 0.35) * radius * 0.68;
-
-    return Transform.translate(
-      offset: Offset(dx, dy),
-      child: Opacity(
-        opacity: 0.55 + wave.abs() * 0.35,
-        child: Transform.scale(
-          scale: 0.88 + wave.abs() * 0.18,
-          child: Icon(Icons.auto_awesome_rounded, color: color, size: size),
-        ),
-      ),
     );
   }
 
@@ -353,28 +296,30 @@ class _LobbyScreenState extends State<LobbyScreen>
     required Color color,
     required VoidCallback onTap,
   }) {
-    final buttonWidth = math.min(MediaQuery.of(context).size.width - 48, 340.0);
+    final buttonWidth = math.min(MediaQuery.of(context).size.width - 40, 360.0);
 
     return GlassContainer(
       onTap: onTap,
       width: buttonWidth,
-      height: 98,
-      padding: EdgeInsets.symmetric(horizontal: 24),
+      height: 76,
+      padding: EdgeInsets.symmetric(horizontal: 18),
       borderRadius: 28,
-      opacity: 0.35, // 기존 버튼보다 살짝 불투명하게 (가독성)
+      opacity: 0.13,
+      blurRadius: 26,
+      isDark: true,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // 아이콘 래퍼 (색상 효과)
           Container(
-            padding: EdgeInsets.all(12),
+            width: 46,
+            height: 46,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(16),
+              color: color.withValues(alpha: 0.14),
+              shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 36, color: color),
+            child: Icon(icon, size: 24, color: color),
           ),
-          SizedBox(width: 20),
+          SizedBox(width: 16),
           Expanded(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -383,20 +328,20 @@ class _LobbyScreenState extends State<LobbyScreen>
                 Text(
                   label,
                   style: TextStyle(
-                    fontSize: 25,
+                    fontSize: 19,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0,
-                    color: AppColors.textDark,
+                    color: AppColors.watchText,
                   ),
                 ),
-                SizedBox(height: 4),
+                SizedBox(height: 3),
                 Text(
                   subtitle,
                   style: TextStyle(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0,
-                    color: AppColors.textLight,
+                    color: AppColors.watchTextMuted,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -404,11 +349,10 @@ class _LobbyScreenState extends State<LobbyScreen>
               ],
             ),
           ),
-          // 화살표 지시자
           Icon(
             Icons.chevron_right_rounded,
-            color: AppColors.textLight.withValues(alpha: 0.5),
-            size: 32,
+            color: AppColors.watchTextDim,
+            size: 26,
           ),
         ],
       ),
