@@ -45,8 +45,6 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
-	<key>GADApplicationIdentifier</key>
-	<string>ca-app-pub-7214081640200790~7253901882</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 </dict>

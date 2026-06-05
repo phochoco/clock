@@ -17,30 +17,6 @@ class Reward {
     required this.levelRequired,
     required this.themeId,
   });
-
-  /// JSON으로 변환
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'icon': icon.codePoint, // int로 저장
-      'iconColor': iconColor.toARGB32(),
-      'levelRequired': levelRequired,
-      'themeId': themeId,
-    };
-  }
-
-  /// JSON에서 생성
-  factory Reward.fromJson(Map<String, dynamic> json) {
-    return Reward(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      icon: IconData(json['icon'] as int, fontFamily: 'MaterialIcons'),
-      iconColor: Color(json['iconColor'] as int),
-      levelRequired: json['levelRequired'] as int,
-      themeId: json['themeId'] as String,
-    );
-  }
 }
 
 /// 사용 가능한 모든 보물 목록

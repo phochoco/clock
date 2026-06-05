@@ -6,7 +6,6 @@ import '../models/reward.dart';
 import '../models/clock_theme.dart';
 import '../services/reward_service.dart';
 import '../services/theme_service.dart';
-import '../services/ad_service.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/mesh_background.dart';
 import '../widgets/analog_clock.dart';
@@ -66,7 +65,7 @@ class _RewardScreenState extends State<RewardScreen> {
                     _buildTopBar(context),
                     SizedBox(height: 20),
                     _buildStats(),
-                    _buildAdButton(),
+                    _buildPracticeHint(),
                     SizedBox(height: 20),
                     _buildTabBar(),
                     SizedBox(height: 20),
@@ -188,155 +187,58 @@ class _RewardScreenState extends State<RewardScreen> {
     );
   }
 
-  // 광고 보고 별 받기 버튼
-  Widget _buildAdButton() {
-    return FutureBuilder<int>(
-      future: AdService.getRemainingRewardedAds(),
-      builder: (context, snapshot) {
-        final remaining = snapshot.data ?? 0;
-        final canWatch = remaining > 0;
-
-        return Container(
-          margin: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-          child: ElevatedButton(
-            onPressed: canWatch ? _watchRewardedAd : null,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.appleYellow,
-              disabledBackgroundColor: AppColors.borderLight.withValues(
-                alpha: 0.18,
+  Widget _buildPracticeHint() {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      child: GlassContainer(
+        padding: EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        borderRadius: 20,
+        opacity: 0.78,
+        blurRadius: 18,
+        child: Row(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: AppColors.appleYellow.withValues(alpha: 0.2),
+                shape: BoxShape.circle,
               ),
-              padding: EdgeInsets.symmetric(vertical: 14, horizontal: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+              child: Icon(
+                Icons.school_rounded,
+                color: AppColors.warning,
+                size: 24,
               ),
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  canWatch
-                      ? Icons.play_circle_filled
-                      : Icons.check_circle_rounded,
-                  size: 28,
-                  color: AppColors.textDark,
-                ),
-                SizedBox(width: 12),
-                Flexible(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        canWatch ? '보호자와 함께 별 받기' : '오늘 별 받기 완료',
-                        style: TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      SizedBox(height: 2),
-                      Text(
-                        canWatch
-                            ? '별 10개 · 오늘 $remaining회 남음'
-                            : '내일 다시 받을 수 있어요',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.textDark.withValues(alpha: 0.72),
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
+            SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '별은 연습으로 모아요',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.textDark,
+                    ),
                   ),
-                ),
-              ],
+                  SizedBox(height: 3),
+                  Text(
+                    '퀴즈와 오늘의 도전을 마치면 새 시계를 열 수 있어요',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textLight,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
-        );
-      },
-    );
-  }
-
-  // 보상형 광고 시청
-  Future<void> _watchRewardedAd() async {
-    final confirmed = await _confirmGuardianAdViewing();
-    if (!mounted) return;
-    if (!confirmed) return;
-
-    final canWatch = await AdService.canWatchRewardedAd();
-    if (!mounted) return;
-    if (!canWatch) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('오늘 광고를 모두 시청했어요! 내일 다시 오세요!'),
-          backgroundColor: AppColors.error,
+          ],
         ),
-      );
-      return;
-    }
-
-    // 광고 준비 상태 확인
-    if (!AdService.isRewardedAdReady) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('광고를 불러오는 중입니다. 잠시 후 다시 시도해주세요!'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    final rewarded = await AdService.showRewardedAd();
-    if (!mounted) return;
-
-    if (rewarded) {
-      await AdService.incrementRewardedAdCount();
-      await RewardService.addStars(10);
-      await _loadData();
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('⭐ 별 10개를 획득했어요!'),
-          backgroundColor: AppColors.success,
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('광고를 끝까지 시청해주세요!'),
-          backgroundColor: AppColors.error,
-        ),
-      );
-    }
-  }
-
-  Future<bool> _confirmGuardianAdViewing() async {
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('보호자와 함께 보기'),
-        content: Text(
-          '보상형 광고가 재생됩니다. 광고를 끝까지 보면 별 10개가 지급돼요.\n\n'
-          '어린이가 혼자 광고를 누르지 않도록 보호자와 함께 진행해주세요.',
-          style: TextStyle(height: 1.45),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: Text('취소'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: Text('광고 보기'),
-          ),
-        ],
       ),
     );
-    return result ?? false;
   }
 
   Widget _buildStatItem(

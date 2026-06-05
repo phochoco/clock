@@ -1,15 +1,14 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../models/clock_theme.dart';
 import '../models/clock_time.dart';
 import '../utils/colors.dart';
-import '../services/ad_service.dart';
 import '../widgets/analog_clock.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/mesh_background.dart';
 import 'playground_screen.dart';
 import 'game_mode_screen.dart';
+import 'quiz_screen.dart';
 import 'reward_screen.dart';
 
 /// 메인 로비 화면
@@ -23,7 +22,6 @@ class LobbyScreen extends StatefulWidget {
 
 class _LobbyScreenState extends State<LobbyScreen>
     with SingleTickerProviderStateMixin {
-  BannerAd? _bannerAd;
   late final AnimationController _motionController;
 
   @override
@@ -33,30 +31,11 @@ class _LobbyScreenState extends State<LobbyScreen>
       vsync: this,
       duration: Duration(seconds: 8),
     )..repeat();
-    _loadBannerAd();
-  }
-
-  Future<void> _loadBannerAd() async {
-    try {
-      final ad = await AdService.loadBannerAd();
-      if (mounted) {
-        setState(() {
-          _bannerAd = ad;
-        });
-      }
-    } catch (e) {
-      debugPrint('배너 광고 로드 실패: $e');
-      // 5초 후 재시도
-      Future.delayed(Duration(seconds: 5), () {
-        if (mounted) _loadBannerAd();
-      });
-    }
   }
 
   @override
   void dispose() {
     _motionController.dispose();
-    _bannerAd?.dispose();
     super.dispose();
   }
 
@@ -67,106 +46,66 @@ class _LobbyScreenState extends State<LobbyScreen>
       body: MeshBackground(
         child: SafeArea(
           child: SingleChildScrollView(
-            child: ConstrainedBox(
-              // Allow content to take at least full screen height
-              constraints: BoxConstraints(
-                minHeight:
-                    MediaQuery.of(context).size.height -
-                    MediaQuery.of(context).padding.top -
-                    MediaQuery.of(context).padding.bottom,
-              ),
-              child: IntrinsicHeight(
-                child: Column(
-                  children: [
-                    _buildGuardianInfoButton(),
-                    SizedBox(height: 8),
+            physics: const BouncingScrollPhysics(),
+            child: Column(
+              children: [
+                _buildGuardianInfoButton(),
+                SizedBox(height: 8),
 
-                    _buildTitle(),
+                _buildTitle(),
 
-                    Expanded(
-                      child: Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            _buildMainGlassButton(
-                              context,
-                              icon: Icons.schedule_rounded,
-                              label: '시계 배우기',
-                              subtitle: '바늘을 맞춰 시간을 익혀요',
-                              color: AppColors.appleBlue,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => PlaygroundScreen(),
-                                  ),
-                                );
-                              },
-                            ),
-
-                            SizedBox(height: 14),
-
-                            _buildMainGlassButton(
-                              context,
-                              icon: Icons.bolt_rounded,
-                              label: '퀴즈',
-                              subtitle: '짧은 문제로 정확도를 높여요',
-                              color: AppColors.appleRed,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => GameModeScreen(),
-                                  ),
-                                );
-                              },
-                            ),
-
-                            SizedBox(height: 14),
-
-                            _buildMainGlassButton(
-                              context,
-                              icon: Icons.grid_view_rounded,
-                              label: '컬렉션',
-                              subtitle: '모은 시계 페이스를 살펴봐요',
-                              color: AppColors.appleYellow,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => RewardScreen(),
-                                  ),
-                                );
-                              },
-                            ),
-                          ],
-                        ),
+                _buildDailyPracticeCard(context),
+                SizedBox(height: 14),
+                _buildMainGlassButton(
+                  context,
+                  icon: Icons.schedule_rounded,
+                  label: '바늘 움직여 보기',
+                  subtitle: '짧은 바늘과 긴 바늘을 살펴봐요',
+                  color: AppColors.appleBlue,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PlaygroundScreen(),
                       ),
-                    ),
-
-                    // 배너 광고 (글래스보드 느낌으로 감싸기)
-                    if (_bannerAd != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 20),
-                        child: GlassContainer(
-                          width: _bannerAd!.size.width.toDouble() + 16,
-                          height: _bannerAd!.size.height.toDouble() + 16,
-                          padding: EdgeInsets.zero,
-                          borderRadius: 16,
-                          child: Center(
-                            child: SizedBox(
-                              width: _bannerAd!.size.width.toDouble(),
-                              height: _bannerAd!.size.height.toDouble(),
-                              child: AdWidget(ad: _bannerAd!),
-                            ),
-                          ),
-                        ),
-                      ),
-
-                    SizedBox(height: 28),
-                  ],
+                    );
+                  },
                 ),
-              ),
+
+                SizedBox(height: 14),
+
+                _buildMainGlassButton(
+                  context,
+                  icon: Icons.bolt_rounded,
+                  label: '놀이 모드',
+                  subtitle: '이야기와 도전으로 시간을 익혀요',
+                  color: AppColors.appleRed,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => GameModeScreen()),
+                    );
+                  },
+                ),
+
+                SizedBox(height: 14),
+
+                _buildMainGlassButton(
+                  context,
+                  icon: Icons.grid_view_rounded,
+                  label: '내 시계들',
+                  subtitle: '모은 시계 페이스를 살펴봐요',
+                  color: AppColors.appleYellow,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => RewardScreen()),
+                    );
+                  },
+                ),
+
+                SizedBox(height: 28),
+              ],
             ),
           ),
         ),
@@ -205,8 +144,7 @@ class _LobbyScreenState extends State<LobbyScreen>
         ),
         content: Text(
           '학습 기록과 별, 선택한 테마는 기기에만 저장됩니다.\n\n'
-          '광고는 Google AdMob을 사용하며 어린이 대상 및 일반 등급 광고 설정을 적용합니다. '
-          '보상형 광고는 보호자가 확인한 뒤 함께 이용해주세요.\n\n'
+          '광고, 계정 가입, 외부 전송 없이 사용할 수 있습니다.\n\n'
           '문의: yeajunss@naver.com',
           style: TextStyle(height: 1.45),
         ),
@@ -283,6 +221,73 @@ class _LobbyScreenState extends State<LobbyScreen>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildDailyPracticeCard(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 24),
+      child: GlassContainer(
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => QuizScreen()),
+          );
+        },
+        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+        borderRadius: 28,
+        opacity: 0.84,
+        blurRadius: 18,
+        child: Row(
+          children: [
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                color: AppColors.appleBlue.withValues(alpha: 0.14),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.play_arrow_rounded,
+                color: AppColors.appleBlue,
+                size: 34,
+              ),
+            ),
+            SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '오늘 문제 풀기',
+                    style: TextStyle(
+                      fontSize: 21,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    '문제 5개를 풀고 별을 모아요',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0,
+                      color: AppColors.textLight,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: AppColors.appleBlue,
+              size: 28,
+            ),
+          ],
+        ),
+      ),
     );
   }
 

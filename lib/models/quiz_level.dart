@@ -1,3 +1,7 @@
+import 'dart:math';
+
+typedef RandomInt = int Function(int max);
+
 /// 퀴즈 난이도 레벨
 enum QuizLevel {
   level1, // 정각만 (분침 고정)
@@ -65,35 +69,12 @@ class QuizQuestion {
   QuizQuestion({required this.hour, required this.minute, required this.level});
 
   /// 레벨에 맞는 랜덤 문제 생성
-  factory QuizQuestion.random(QuizLevel level) {
-    final random = DateTime.now().millisecondsSinceEpoch;
-    int hour = (random % 12);
-    int minute;
+  factory QuizQuestion.random(QuizLevel level, {RandomInt? randomInt}) {
+    return QuizQuestionGenerator(randomInt: randomInt).next(level);
+  }
 
-    switch (level) {
-      case QuizLevel.level1:
-        // 정각만
-        minute = 0;
-        break;
-      case QuizLevel.level2:
-        // 정각 또는 30분
-        minute = (random % 2) * 30;
-        break;
-      case QuizLevel.level3:
-        // 5분 단위
-        minute = ((random % 12) * 5);
-        break;
-      case QuizLevel.level4:
-        // 1분 단위 (쉬운 범위)
-        minute = (random % 60);
-        break;
-      case QuizLevel.level5:
-        // 마의 구간 (50~59분)
-        minute = 50 + (random % 10);
-        break;
-    }
-
-    return QuizQuestion(hour: hour, minute: minute, level: level);
+  bool isSameTime(QuizQuestion other) {
+    return hour == other.hour && minute == other.minute;
   }
 
   /// 정답 텍스트
@@ -103,5 +84,56 @@ class QuizQuestion {
       return '$h시';
     }
     return '$h시 $minute분';
+  }
+}
+
+class QuizQuestionGenerator {
+  QuizQuestionGenerator({RandomInt? randomInt})
+    : _randomInt = randomInt ?? Random().nextInt;
+
+  final RandomInt _randomInt;
+
+  QuizQuestion next(QuizLevel level, {QuizQuestion? previous}) {
+    QuizQuestion question;
+    var attempts = 0;
+
+    do {
+      question = _build(level);
+      attempts++;
+    } while (previous != null &&
+        question.isSameTime(previous) &&
+        attempts < 12);
+
+    return question;
+  }
+
+  QuizQuestion _build(QuizLevel level) {
+    final hour = _randomInt(12);
+    int minute;
+
+    switch (level) {
+      case QuizLevel.level1:
+        // 정각만
+        minute = 0;
+        break;
+      case QuizLevel.level2:
+        // 정각 또는 30분
+        minute = _randomInt(2) * 30;
+        break;
+      case QuizLevel.level3:
+        // 5분 단위
+        minute = _randomInt(12) * 5;
+        break;
+      case QuizLevel.level4:
+        // 1분 단위 (쉬운 범위)
+        minute = _randomInt(60);
+        break;
+      case QuizLevel.level5:
+        // 마의 구간 (50~59분)
+        minute = 50 + _randomInt(10);
+        break;
+    }
+
+    return QuizQuestion(hour: hour, minute: minute, level: level);
   }
 }

@@ -1,16 +1,24 @@
-# myclock
+# 째깍 보물섬
 
-A new Flutter project.
+어린이가 아날로그 시계를 직접 움직이며 시간을 익히는 Flutter 앱입니다. 광고 없이 로컬 진행도만 저장하고, 퀴즈와 도전 보상으로 시계 페이스를 모으는 흐름을 제공합니다.
 
-## Getting Started
+## 주요 흐름
 
-This project is a starting point for a Flutter application.
+- 오늘 문제 풀기: 5문제 단위로 시간을 맞추고 별을 모읍니다.
+- 바늘 움직여 보기: 짧은 바늘과 긴 바늘의 역할을 직접 살펴봅니다.
+- 놀이 모드: 스토리, 타임 스냅, 타임 어택, 데일리 챌린지를 제공합니다.
+- 내 시계들: 모은 별로 새 시계 페이스를 열고 선택합니다.
 
-A few resources to get you started if this is your first Flutter project:
+## 개발
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```bash
+flutter pub get
+flutter analyze lib test
+flutter test
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+웹 미리보기:
+
+```bash
+flutter run -d web-server --web-hostname 127.0.0.1 --web-port 5173
+```

@@ -43,7 +43,7 @@ class GameModeScreen extends StatelessWidget {
                 context,
                 icon: Icons.quiz_rounded,
                 title: '퀴즈 도전',
-                description: '5단계 레벨을 클리어하고\n보물을 획득하세요!',
+                description: '5단계 문제를 풀고\n별을 모아요!',
                 color: AppColors.minuteBlue,
                 onTap: () {
                   Navigator.push(
@@ -76,7 +76,7 @@ class GameModeScreen extends StatelessWidget {
                 context,
                 icon: Icons.camera_alt_rounded,
                 title: '빙글빙글 타임 스냅',
-                description: '돌아가는 바늘을 목표 시간에\n정확히 멈춰라! (리듬 게임)',
+                description: '돌아가는 바늘을\n목표 시간에 멈춰요!',
                 color: AppColors.secondary,
                 onTap: () {
                   Navigator.push(
@@ -93,7 +93,7 @@ class GameModeScreen extends StatelessWidget {
                 context,
                 icon: Icons.timer_rounded,
                 title: '타임 어택',
-                description: '60초 안에 최대한 많은\n문제를 풀어보세요!',
+                description: '60초 동안 시계 문제를\n풀어봐요!',
                 color: AppColors.hourRed,
                 onTap: () {
                   Navigator.push(
@@ -110,7 +110,7 @@ class GameModeScreen extends StatelessWidget {
                 context,
                 icon: Icons.calendar_today_rounded,
                 title: '데일리 챌린지',
-                description: '매일 새로운 문제 3개!\n보너스 별을 받으세요!',
+                description: '매일 새 문제 3개를 풀고\n보너스 별을 받아요!',
                 color: AppColors.warning,
                 onTap: () {
                   Navigator.push(

@@ -7,8 +7,11 @@ void main() {
     // Build our app and trigger a frame.
     await tester.pumpWidget(const MyClockApp());
 
-    // Verify that the lobby screen loads
-    expect(find.text('시계 배우기'), findsWidgets);
+    // Verify that the lobby screen loads with the primary learning path.
+    expect(find.text('오늘 문제 풀기'), findsOneWidget);
+    expect(find.text('바늘 움직여 보기'), findsOneWidget);
+    expect(find.text('놀이 모드'), findsOneWidget);
+    expect(find.text('내 시계들'), findsOneWidget);
   });
 
   testWidgets('Guardian info is available from lobby', (
@@ -20,6 +23,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 250));
 
     expect(find.text('보호자 안내'), findsWidgets);
-    expect(find.textContaining('어린이 대상'), findsOneWidget);
+    expect(find.textContaining('광고, 계정 가입, 외부 전송 없이'), findsOneWidget);
+    expect(find.textContaining('Google AdMob'), findsNothing);
   });
 }

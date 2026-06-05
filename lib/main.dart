@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'screens/lobby_screen.dart';
-import 'services/ad_service.dart';
 
 void main() async {
   // Flutter 바인딩 초기화
@@ -12,17 +11,6 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
-
-  // AdMob 초기화 (앱 시작 전에 완료)
-  try {
-    await AdService.initialize();
-    debugPrint('AdMob 초기화 완료');
-
-    // 보상형 광고 미리 로드
-    AdService.loadRewardedAd();
-  } catch (e) {
-    debugPrint('AdMob 초기화 실패: $e');
-  }
 
   // 앱 시작
   runApp(const MyClockApp());
@@ -37,9 +25,9 @@ class MyClockApp extends StatelessWidget {
       title: '째깍 보물섬',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        primarySwatch: Colors.pink,
+        primaryColor: Color(0xFF0A84FF),
         fontFamily: 'AppleSDGothicNeo', // iOS 기본 폰트
-        scaffoldBackgroundColor: Color(0xFFFFF9E6),
+        scaffoldBackgroundColor: Color(0xFFF8FAFC),
       ),
       home: const LobbyScreen(),
     );

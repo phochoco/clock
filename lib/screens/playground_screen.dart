@@ -188,7 +188,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '목표 시간',
+                    '지금 만든 시간',
                     style: TextStyle(
                       fontSize: 13,
                       fontWeight: FontWeight.w700,
@@ -258,6 +258,15 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
         blurRadius: 18,
         child: Column(
           children: [
+            Text(
+              '바늘을 손가락으로 돌려 보세요',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w900,
+                color: AppColors.textDark,
+              ),
+            ),
+            SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -315,7 +324,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
       child: Column(
         children: [
           Text(
-            '빠른 설정',
+            '바로 맞춰 보기',
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w800,

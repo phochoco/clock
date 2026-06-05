@@ -27,7 +27,7 @@ class _QuizScreenState extends State<QuizScreen> {
 
   QuizLevel _currentLevel = QuizLevel.level1;
   QuizQuestion? _currentQuestion;
-  QuizQuestion? _previousQuestion; // 이전 문제 저장 (중복 방지용)
+  final QuizQuestionGenerator _questionGenerator = QuizQuestionGenerator();
   ClockTime? _userAnswer;
   bool _showResult = false;
   bool _isCorrect = false;
@@ -72,21 +72,12 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   void _generateQuestion() {
-    QuizQuestion newQuestion;
-    int attempts = 0;
-    const maxAttempts = 10; // 무한 루프 방지
-
-    // 이전 문제와 다른 문제가 나올 때까지 반복
-    do {
-      newQuestion = QuizQuestion.random(_currentLevel);
-      attempts++;
-    } while (_previousQuestion != null &&
-        newQuestion.hour == _previousQuestion!.hour &&
-        newQuestion.minute == _previousQuestion!.minute &&
-        attempts < maxAttempts);
+    final newQuestion = _questionGenerator.next(
+      _currentLevel,
+      previous: _currentQuestion,
+    );
 
     setState(() {
-      _previousQuestion = _currentQuestion; // 현재 문제를 이전 문제로 저장
       _currentQuestion = newQuestion;
       _userAnswer = null;
       _showResult = false;
@@ -97,7 +88,7 @@ class _QuizScreenState extends State<QuizScreen> {
     // 문제 읽어주기 (화면 갱신 후 실행)
     Future.delayed(Duration(milliseconds: 500), () {
       if (mounted) {
-        TtsService.speak('${newQuestion.answerText}을 만들어보세요!');
+        TtsService.speak('${newQuestion.answerText}을 만들어봐요!');
       }
     });
   }
@@ -130,14 +121,14 @@ class _QuizScreenState extends State<QuizScreen> {
 
         // 콤보에 따른 메시지 및 보너스 별
         if (_combo == 2) {
-          _comboMessage = 'Good! 🎉';
+          _comboMessage = '좋아요! 🎉';
           _showCombo = true;
         } else if (_combo == 3) {
-          _comboMessage = 'Great! 🌟';
+          _comboMessage = '멋져요! 🌟';
           _showCombo = true;
           starsEarned = 2; // 보너스 별
         } else if (_combo >= 5) {
-          _comboMessage = 'Perfect! 🔥';
+          _comboMessage = '완벽해요! 🔥';
           _showCombo = true;
           starsEarned = 3; // 더 많은 보너스
         }
@@ -204,7 +195,7 @@ class _QuizScreenState extends State<QuizScreen> {
                     Icon(reward.icon, size: 48, color: reward.iconColor),
                     SizedBox(height: 8),
                     Text(
-                      '${reward.name} 획득!',
+                      '${reward.name} 받았어요!',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -321,7 +312,7 @@ class _QuizScreenState extends State<QuizScreen> {
               Navigator.pop(context); // 퀴즈 화면 닫기
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.hourRed,
+              backgroundColor: AppColors.appleBlue,
               minimumSize: Size(double.infinity, 50),
             ),
             child: Text(
@@ -427,7 +418,7 @@ class _QuizScreenState extends State<QuizScreen> {
               margin: EdgeInsets.only(right: 12),
               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               decoration: BoxDecoration(
-                color: isSelected ? AppColors.hourRed : Colors.white,
+                color: isSelected ? AppColors.appleBlue : Colors.white,
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
@@ -477,7 +468,7 @@ class _QuizScreenState extends State<QuizScreen> {
           child: Column(
             children: [
               Text(
-                '이 시간을 만들어보세요!',
+                '이 시간을 만들어봐요!',
                 style: TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
@@ -490,7 +481,7 @@ class _QuizScreenState extends State<QuizScreen> {
                 style: TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.bold,
-                  color: AppColors.hourRed,
+                  color: AppColors.appleBlue,
                 ),
               ),
             ],
