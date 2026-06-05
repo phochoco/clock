@@ -53,6 +53,7 @@ class _LobbyScreenState extends State<LobbyScreen>
                 SizedBox(height: 8),
 
                 _buildTitle(),
+                SizedBox(height: 18),
 
                 _buildDailyPracticeCard(context),
                 SizedBox(height: 14),
@@ -208,8 +209,8 @@ class _LobbyScreenState extends State<LobbyScreen>
         return Transform.scale(
           scale: 1 + math.sin(t * math.pi * 2) * 0.012,
           child: SizedBox(
-            width: 250,
-            height: 250,
+            width: 240,
+            height: 240,
             child: AnalogClock(
               initialTime: ClockTime(hour: 10, minute: 10),
               interactive: false,
@@ -224,69 +225,75 @@ class _LobbyScreenState extends State<LobbyScreen>
     );
   }
 
+  double _cardWidth(BuildContext context) {
+    return math.min(MediaQuery.of(context).size.width - 40, 360.0);
+  }
+
   Widget _buildDailyPracticeCard(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: 24),
-      child: GlassContainer(
-        onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => QuizScreen()),
-          );
-        },
-        padding: EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-        borderRadius: 28,
-        opacity: 0.84,
-        blurRadius: 18,
-        child: Row(
-          children: [
-            Container(
-              width: 58,
-              height: 58,
-              decoration: BoxDecoration(
-                color: AppColors.appleBlue.withValues(alpha: 0.14),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.play_arrow_rounded,
-                color: AppColors.appleBlue,
-                size: 34,
-              ),
+    return GlassContainer(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => QuizScreen()),
+        );
+      },
+      width: _cardWidth(context),
+      height: 88,
+      padding: EdgeInsets.symmetric(horizontal: 18),
+      borderRadius: 28,
+      opacity: 0.84,
+      blurRadius: 18,
+      child: Row(
+        children: [
+          Container(
+            width: 54,
+            height: 54,
+            decoration: BoxDecoration(
+              color: AppColors.appleBlue.withValues(alpha: 0.14),
+              shape: BoxShape.circle,
             ),
-            SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    '오늘 문제 풀기',
-                    style: TextStyle(
-                      fontSize: 21,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    '문제 5개를 풀고 별을 모아요',
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0,
-                      color: AppColors.textLight,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
+            child: Icon(
+              Icons.play_arrow_rounded,
               color: AppColors.appleBlue,
-              size: 28,
+              size: 32,
             ),
-          ],
-        ),
+          ),
+          SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '오늘 문제 풀기',
+                  style: TextStyle(
+                    fontSize: 21,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0,
+                    color: AppColors.textDark,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  '문제 5개를 풀고 별을 모아요',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0,
+                    color: AppColors.textLight,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          Icon(
+            Icons.chevron_right_rounded,
+            color: AppColors.appleBlue,
+            size: 28,
+          ),
+        ],
       ),
     );
   }
@@ -299,11 +306,9 @@ class _LobbyScreenState extends State<LobbyScreen>
     required Color color,
     required VoidCallback onTap,
   }) {
-    final buttonWidth = math.min(MediaQuery.of(context).size.width - 40, 360.0);
-
     return GlassContainer(
       onTap: onTap,
-      width: buttonWidth,
+      width: _cardWidth(context),
       height: 76,
       padding: EdgeInsets.symmetric(horizontal: 18),
       borderRadius: 28,
