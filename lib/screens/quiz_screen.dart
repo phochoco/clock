@@ -2,13 +2,13 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import '../models/clock_time.dart';
 import '../models/quiz_level.dart';
+import '../models/quiz_session.dart';
 import '../models/reward.dart';
 import '../models/clock_theme.dart';
 import '../services/reward_service.dart';
 import '../services/theme_service.dart';
 import '../services/tts_service.dart';
 import '../utils/colors.dart';
-import '../utils/clock_answer_validator.dart';
 import '../utils/haptic.dart';
 import '../widgets/analog_clock.dart';
 import '../widgets/mesh_background.dart';
@@ -16,7 +16,9 @@ import '../widgets/mesh_background.dart';
 /// 퀴즈 모드 화면
 /// 5단계 레벨 시스템으로 시계 읽기 연습
 class QuizScreen extends StatefulWidget {
-  const QuizScreen({super.key});
+  const QuizScreen({super.key, this.initialLevel = QuizLevel.level1});
+
+  final QuizLevel initialLevel;
 
   @override
   State<QuizScreen> createState() => _QuizScreenState();
@@ -25,19 +27,10 @@ class QuizScreen extends StatefulWidget {
 class _QuizScreenState extends State<QuizScreen> {
   static const int questionsPerLevel = 5; // 레벨당 문제 수
 
-  QuizLevel _currentLevel = QuizLevel.level1;
-  QuizQuestion? _currentQuestion;
-  final QuizQuestionGenerator _questionGenerator = QuizQuestionGenerator();
-  ClockTime? _userAnswer;
-  bool _showResult = false;
-  bool _isCorrect = false;
-  int _score = 0;
+  late final QuizSession _session;
+  var _isSavingAnswer = false;
+  var _questionToken = 0;
   final GlobalKey<AnalogClockState> _clockKey = GlobalKey();
-
-  // 콤보 시스템
-  int _combo = 0;
-  String _comboMessage = '';
-  bool _showCombo = false;
 
   // 선택된 테마
   ClockTheme _selectedTheme = ClockThemeList.basic;
@@ -48,9 +41,11 @@ class _QuizScreenState extends State<QuizScreen> {
   @override
   void initState() {
     super.initState();
+    _session = QuizSession(questionsPerLevel: questionsPerLevel);
+    _session.start(level: widget.initialLevel);
     _loadTheme();
     _initTts();
-    _generateQuestion();
+    _speakCurrentQuestion();
   }
 
   Future<void> _initTts() async {
@@ -66,104 +61,79 @@ class _QuizScreenState extends State<QuizScreen> {
 
   Future<void> _loadTheme() async {
     final theme = await ThemeService.getSelectedTheme();
+    if (!mounted) return;
     setState(() {
       _selectedTheme = theme;
     });
   }
 
-  void _generateQuestion() {
-    final newQuestion = _questionGenerator.next(
-      _currentLevel,
-      previous: _currentQuestion,
-    );
-
-    setState(() {
-      _currentQuestion = newQuestion;
-      _userAnswer = null;
-      _showResult = false;
-      _isCorrect = false;
-      _showCombo = false; // 콤보 메시지 숨기기
-    });
-
-    // 문제 읽어주기 (화면 갱신 후 실행)
+  void _speakCurrentQuestion() {
+    final question = _session.currentQuestion;
+    if (question == null) return;
+    final token = ++_questionToken;
     Future.delayed(Duration(milliseconds: 500), () {
-      if (mounted) {
-        TtsService.speak('${newQuestion.answerText}을 만들어봐요!');
+      if (mounted && token == _questionToken) {
+        TtsService.speak('${question.answerText}을 만들어봐요!');
       }
     });
   }
 
-  void _checkAnswer() async {
-    if (_userAnswer == null || _currentQuestion == null) return;
-
-    // 정답 시간을 ClockTime으로 변환
-    final correctTime = ClockTime(
-      hour: _currentQuestion!.hour,
-      minute: _currentQuestion!.minute,
-    );
-
-    final correct = ClockAnswerValidator.isCorrect(_userAnswer!, correctTime);
-
+  void _nextQuestion() {
     setState(() {
-      _showResult = true;
-      _isCorrect = correct;
-      if (correct) {
-        _score++;
+      _session.nextQuestion();
+      _clockKey.currentState?.setTime(ClockTime(hour: 12, minute: 0));
+    });
+    _speakCurrentQuestion();
+  }
 
-        // 정답 음성 재생 (MP3)
-        _audioPlayer.play(AssetSource('good/good.mp3'));
+  void _switchLevel(QuizLevel level) {
+    setState(() {
+      _session.switchLevel(level);
+      _clockKey.currentState?.setTime(ClockTime(hour: 12, minute: 0));
+    });
+    _speakCurrentQuestion();
+  }
 
-        // 콤보 증가
-        _combo++;
-
-        // 별 획득 (기본 1개)
-        int starsEarned = 1;
-
-        // 콤보에 따른 메시지 및 보너스 별
-        if (_combo == 2) {
-          _comboMessage = '좋아요! 🎉';
-          _showCombo = true;
-        } else if (_combo == 3) {
-          _comboMessage = '멋져요! 🌟';
-          _showCombo = true;
-          starsEarned = 2; // 보너스 별
-        } else if (_combo >= 5) {
-          _comboMessage = '완벽해요! 🔥';
-          _showCombo = true;
-          starsEarned = 3; // 더 많은 보너스
-        }
-
-        // 별 저장
-        RewardService.addStars(starsEarned);
-
-        HapticHelper.heavyImpact();
-      } else {
-        // 오답 시 콤보 리셋
-        _combo = 0;
-        _showCombo = false;
-        HapticHelper.vibrate();
-      }
+  void _retryQuestion() {
+    setState(() {
+      _session.retryQuestion();
+      _clockKey.currentState?.setTime(ClockTime(hour: 12, minute: 0));
     });
   }
 
-  // 획득한 별 개수 계산
-  int _getStarsEarned() {
-    if (_combo >= 5) return 3;
-    if (_combo >= 3) return 2;
-    return 1;
+  Future<void> _checkAnswer() async {
+    if (_isSavingAnswer ||
+        _session.userAnswer == null ||
+        _session.currentQuestion == null) {
+      return;
+    }
+
+    final result = _session.answer(_session.userAnswer!);
+    setState(() => _isSavingAnswer = result.isCorrect);
+
+    if (result.isCorrect) {
+      await RewardService.addStars(result.earnedStars);
+      await _audioPlayer.play(AssetSource('good/good.mp3'));
+      HapticHelper.heavyImpact();
+    } else {
+      HapticHelper.vibrate();
+    }
+
+    if (!mounted) return;
+    setState(() => _isSavingAnswer = false);
   }
 
   void _showLevelCompleteDialog() async {
     // 레벨 완료 기록
-    await RewardService.completeLevel(_currentLevel.number);
+    await RewardService.completeLevel(_session.currentLevel.number);
 
     // 완벽한 클리어 보너스 (5/5 정답)
-    if (_score == questionsPerLevel) {
+    if (_session.score == questionsPerLevel) {
       await RewardService.addStars(3); // 보너스 별 3개
     }
 
     // 보물 획득
-    final reward = RewardList.getRewardForLevel(_currentLevel.number);
+    final reward = RewardList.getRewardForLevel(_session.currentLevel.number);
     if (reward != null) {
       await RewardService.unlockReward(reward.id);
     }
@@ -179,7 +149,7 @@ class _QuizScreenState extends State<QuizScreen> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              '$questionsPerLevel문제 중 $_score문제를 맞췄습니다!',
+              '$questionsPerLevel문제 중 ${_session.score}문제를 맞췄습니다!',
               textAlign: TextAlign.center,
             ),
             if (reward != null) ...[
@@ -214,25 +184,27 @@ class _QuizScreenState extends State<QuizScreen> {
               Navigator.pop(context);
               // 현재 레벨 다시 시작
               setState(() {
-                _score = 0;
-                _generateQuestion();
+                _session.switchLevel(_session.currentLevel);
+                _clockKey.currentState?.setTime(ClockTime(hour: 12, minute: 0));
               });
+              _speakCurrentQuestion();
             },
             child: Text('다시 하기'),
           ),
           TextButton(
             onPressed: () {
               Navigator.pop(context);
-              final nextLevel = _currentLevel.next;
+              final nextLevel = _session.currentLevel.next;
               if (nextLevel != null) {
                 setState(() {
-                  _currentLevel = nextLevel;
-                  _score = 0;
-                  _generateQuestion();
+                  _session.switchLevel(nextLevel);
+                  _clockKey.currentState?.setTime(
+                    ClockTime(hour: 12, minute: 0),
+                  );
                 });
+                _speakCurrentQuestion();
               } else {
                 // 마지막 레벨 완료 - 특별 축하 메시지
-                Navigator.pop(context); // 레벨 완료 다이얼로그 닫기
                 _showAllLevelsCompleteDialog();
               }
             },
@@ -292,7 +264,7 @@ class _QuizScreenState extends State<QuizScreen> {
                   Text('🎁', style: TextStyle(fontSize: 48)),
                   SizedBox(height: 8),
                   Text(
-                    '모든 무료 테마가\n해금되었습니다!',
+                    '모든 무료 시계를\n열었습니다!',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -344,8 +316,8 @@ class _QuizScreenState extends State<QuizScreen> {
                 SizedBox(height: 20),
                 _buildQuestionArea(),
                 SizedBox(height: 20),
-                if (!_showResult) _buildCheckButton(),
-                if (_showResult) _buildResultArea(),
+                if (!_session.showResult) _buildCheckButton(),
+                if (_session.showResult) _buildResultArea(),
                 SizedBox(height: 20),
               ],
             ),
@@ -383,7 +355,7 @@ class _QuizScreenState extends State<QuizScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
-              '$_score / $questionsPerLevel',
+              '${_session.score} / $questionsPerLevel',
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -405,15 +377,10 @@ class _QuizScreenState extends State<QuizScreen> {
         itemCount: QuizLevel.values.length,
         itemBuilder: (context, index) {
           final level = QuizLevel.values[index];
-          final isSelected = level == _currentLevel;
+          final isSelected = level == _session.currentLevel;
 
           return GestureDetector(
-            onTap: () {
-              setState(() {
-                _currentLevel = level;
-                _generateQuestion();
-              });
-            },
+            onTap: () => _switchLevel(level),
             child: Container(
               margin: EdgeInsets.only(right: 12),
               padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
@@ -446,7 +413,7 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   Widget _buildQuestionArea() {
-    if (_currentQuestion == null) return SizedBox();
+    if (_session.currentQuestion == null) return SizedBox();
 
     return Column(
       children: [
@@ -477,7 +444,7 @@ class _QuizScreenState extends State<QuizScreen> {
               ),
               SizedBox(height: 12),
               Text(
-                _currentQuestion!.answerText,
+                _session.currentQuestion!.answerText,
                 style: TextStyle(
                   fontSize: 36,
                   fontWeight: FontWeight.bold,
@@ -500,11 +467,11 @@ class _QuizScreenState extends State<QuizScreen> {
             notifyInitialTime: false,
             onTimeChanged: (time) {
               setState(() {
-                _userAnswer = time;
+                _session.setAnswer(time);
               });
             },
             showGuideline: true,
-            showMinuteNumbers: _currentLevel.index >= 2,
+            showMinuteNumbers: _session.currentLevel.index >= 2,
             theme: _selectedTheme, // 선택된 테마 적용
           ),
         ),
@@ -513,7 +480,7 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   Widget _buildCheckButton() {
-    final canCheck = _userAnswer != null;
+    final canCheck = _session.userAnswer != null && !_isSavingAnswer;
 
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 24),
@@ -553,7 +520,7 @@ class _QuizScreenState extends State<QuizScreen> {
   Widget _buildResultArea() {
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 24),
-      child: _isCorrect
+      child: _session.isCorrect
           ? // 정답일 때: 메시지와 버튼을 하나의 박스로 통합
             Container(
               decoration: BoxDecoration(
@@ -580,7 +547,7 @@ class _QuizScreenState extends State<QuizScreen> {
                         ),
                         SizedBox(width: 6),
                         Text(
-                          '⭐ +${_getStarsEarned()}',
+                          '⭐ +${_session.lastEarnedStars}',
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w600,
@@ -588,10 +555,10 @@ class _QuizScreenState extends State<QuizScreen> {
                           ),
                         ),
                         // 콤보 메시지도 같은 줄에
-                        if (_showCombo) ...[
+                        if (_session.showCombo) ...[
                           SizedBox(width: 6),
                           Text(
-                            _comboMessage,
+                            _session.comboMessage,
                             style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
@@ -606,16 +573,18 @@ class _QuizScreenState extends State<QuizScreen> {
                   Padding(
                     padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
                     child: GestureDetector(
-                      onTap: () {
-                        // 5문제 완료 체크
-                        if (_score >= questionsPerLevel) {
-                          // 레벨 완료!
-                          _showLevelCompleteDialog();
-                        } else {
-                          // 다음 문제
-                          _generateQuestion();
-                        }
-                      },
+                      onTap: _isSavingAnswer
+                          ? null
+                          : () {
+                              // 5문제 완료 체크
+                              if (_session.score >= questionsPerLevel) {
+                                // 레벨 완료!
+                                _showLevelCompleteDialog();
+                              } else {
+                                // 다음 문제
+                                _nextQuestion();
+                              }
+                            },
                       child: Container(
                         width: double.infinity,
                         height: 54,
@@ -632,7 +601,7 @@ class _QuizScreenState extends State<QuizScreen> {
                         ),
                         child: Center(
                           child: Text(
-                            '다음 문제',
+                            _isSavingAnswer ? '별 저장 중' : '다음 문제',
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -662,14 +631,7 @@ class _QuizScreenState extends State<QuizScreen> {
                 GestureDetector(
                   onTap: () {
                     // 오답일 때: 다시 시도 (결과만 숨김 + 시계 리셋)
-                    setState(() {
-                      _showResult = false;
-                      _userAnswer = null;
-                    });
-                    // 시계를 초기 위치(12:00)로 리셋
-                    _clockKey.currentState?.setTime(
-                      ClockTime(hour: 12, minute: 0),
-                    );
+                    _retryQuestion();
                   },
                   child: Container(
                     width: double.infinity,

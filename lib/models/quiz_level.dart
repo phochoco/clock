@@ -32,13 +32,13 @@ extension QuizLevelExtension on QuizLevel {
   String get description {
     switch (this) {
       case QuizLevel.level1:
-        return '정각만 맞춰보세요!';
+        return '정각부터 맞춰봐요';
       case QuizLevel.level2:
         return '30분도 배워볼까요?';
       case QuizLevel.level3:
-        return '5분 단위로 읽어보세요!';
+        return '5분 단위로 읽어봐요';
       case QuizLevel.level4:
-        return '정확한 시간을 맞춰보세요!';
+        return '정확한 시간을 맞춰봐요';
       case QuizLevel.level5:
         return '어려운 시간도 척척!';
     }

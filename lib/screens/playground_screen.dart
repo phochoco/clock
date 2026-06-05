@@ -20,6 +20,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
   ClockTime _currentTime = ClockTime.now();
   bool _showDigital = true;
   bool _showMinuteNumbers = false;
+  int _lessonStep = 0;
   ClockTheme? _theme;
   final GlobalKey<AnalogClockState> _clockKey = GlobalKey();
 
@@ -55,6 +56,10 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
               if (_showDigital) _buildTimeReadout(),
 
               SizedBox(height: 14),
+
+              _buildLessonSteps(),
+
+              SizedBox(height: 12),
 
               Expanded(
                 child: Center(
@@ -246,6 +251,74 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildLessonSteps() {
+    const steps = ['정각', '30분', '5분'];
+
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 24),
+      child: Row(
+        children: List.generate(steps.length, (index) {
+          final selected = _lessonStep == index;
+          return Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(
+                right: index == steps.length - 1 ? 0 : 8,
+              ),
+              child: GestureDetector(
+                onTap: () => _applyLessonStep(index),
+                child: AnimatedContainer(
+                  duration: Duration(milliseconds: 160),
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: selected ? AppColors.appleBlue : Colors.white,
+                    borderRadius: BorderRadius.circular(21),
+                    border: Border.all(
+                      color: selected
+                          ? AppColors.appleBlue
+                          : AppColors.borderLight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 16,
+                        offset: Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  alignment: Alignment.center,
+                  child: Text(
+                    steps[index],
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: selected ? Colors.white : AppColors.textDark,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  void _applyLessonStep(int step) {
+    final examples = [
+      ClockTime(hour: 3, minute: 0),
+      ClockTime(hour: 3, minute: 30),
+      ClockTime(hour: 3, minute: 25),
+    ];
+    final nextTime = examples[step];
+
+    _clockKey.currentState?.setTime(nextTime);
+    setState(() {
+      _lessonStep = step;
+      _currentTime = nextTime;
+      _showMinuteNumbers = step >= 2;
+    });
   }
 
   Widget _buildHelpText() {

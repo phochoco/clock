@@ -8,7 +8,7 @@ void main() {
     await tester.pumpWidget(const MyClockApp());
 
     // Verify that the lobby screen loads with the primary learning path.
-    expect(find.text('오늘 문제 풀기'), findsOneWidget);
+    expect(find.text('레벨 1 이어 하기'), findsOneWidget);
     expect(find.text('바늘 움직여 보기'), findsOneWidget);
     expect(find.text('놀이 모드'), findsOneWidget);
     expect(find.text('내 시계들'), findsOneWidget);

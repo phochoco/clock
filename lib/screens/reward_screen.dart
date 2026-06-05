@@ -27,7 +27,7 @@ class _RewardScreenState extends State<RewardScreen> {
   int _totalStars = 0; // 별 개수 추가
   String _selectedThemeId = 'basic_clock';
   bool _isLoading = true;
-  int _selectedTabIndex = 0; // 0: 보유 페이스, 1: 새 페이스
+  int _selectedTabIndex = 0; // 0: 보유 시계, 1: 새 시계
 
   @override
   void initState() {
@@ -92,7 +92,7 @@ class _RewardScreenState extends State<RewardScreen> {
             onPressed: () => Navigator.pop(context),
           ),
           Text(
-            '컬렉션',
+            '내 시계들',
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.w800,
@@ -106,7 +106,7 @@ class _RewardScreenState extends State<RewardScreen> {
   }
 
   Widget _buildStats() {
-    final int totalThemes = ClockThemeList.all.length; // 모든 테마(무료+유료) 기준
+    final int totalThemes = ClockThemeList.all.length; // 모든 시계 기준
     final double progress = totalThemes > 0
         ? _unlockedRewardCount / totalThemes
         : 0.0;
@@ -139,13 +139,13 @@ class _RewardScreenState extends State<RewardScreen> {
                 _buildStatItem(
                   Icons.watch_rounded,
                   AppColors.appleBlue,
-                  '페이스',
+                  '시계',
                   '$_unlockedRewardCount',
                 ),
               ],
             ),
             SizedBox(height: 20),
-            // 새로 추가된 도감 수집률 바
+            // 모은 시계 진행률 바
             Row(
               children: [
                 Icon(
@@ -155,7 +155,7 @@ class _RewardScreenState extends State<RewardScreen> {
                 ),
                 SizedBox(width: 8),
                 Text(
-                  '도감 달성률',
+                  '모은 시계',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
                     color: AppColors.textDark,
@@ -636,7 +636,7 @@ class _RewardScreenState extends State<RewardScreen> {
                       ),
                       SizedBox(width: 8),
                       Text(
-                        '보유 페이스',
+                        '보유 시계',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -678,7 +678,7 @@ class _RewardScreenState extends State<RewardScreen> {
                       ),
                       SizedBox(width: 8),
                       Text(
-                        '새 페이스',
+                        '새 시계',
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -854,6 +854,17 @@ class _RewardScreenState extends State<RewardScreen> {
                               ],
                             ),
                           ),
+                        if (!isUnlocked && !canAfford) ...[
+                          SizedBox(height: 6),
+                          Text(
+                            '별 ${theme.starCost - _totalStars}개 더',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w700,
+                              color: AppColors.textLight,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -912,15 +923,15 @@ class _RewardScreenState extends State<RewardScreen> {
     );
   }
 
-  /// 테마 열기 확인 다이얼로그
+  /// 새 시계 열기 확인 다이얼로그
   void _showPurchaseDialog(ClockTheme theme, bool isUnlocked, bool canAfford) {
     if (isUnlocked) {
-      // 이미 보유 중인 테마 - 적용하기
+      // 이미 보유 중인 시계 - 적용하기
       showDialog(
         context: context,
         builder: (dialogContext) => AlertDialog(
           title: Text(theme.name),
-          content: Text('이 테마를 적용하시겠습니까?'),
+          content: Text('이 시계를 사용할까요?'),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(dialogContext),
@@ -933,10 +944,10 @@ class _RewardScreenState extends State<RewardScreen> {
                 setState(() => _selectedThemeId = theme.id);
                 Navigator.pop(dialogContext);
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('${theme.name}(으)로 변경되었습니다!')),
+                  SnackBar(content: Text('${theme.name}(으)로 바꿨어요!')),
                 );
               },
-              child: Text('적용하기'),
+              child: Text('사용하기'),
             ),
           ],
         ),
@@ -951,7 +962,8 @@ class _RewardScreenState extends State<RewardScreen> {
         builder: (context) => AlertDialog(
           title: Text('별이 부족합니다'),
           content: Text(
-            '${theme.name}을(를) 열려면 별 ${theme.starCost}개가 필요합니다.\n현재 보유: $_totalStars개',
+            '${theme.name}을(를) 열려면 별 ${theme.starCost}개가 필요합니다.\n'
+            '현재 보유: $_totalStars개 · 더 필요한 별: ${theme.starCost - _totalStars}개',
           ),
           actions: [
             TextButton(
@@ -964,7 +976,7 @@ class _RewardScreenState extends State<RewardScreen> {
       return;
     }
 
-    // 테마 열기 확인
+    // 새 시계 열기 확인
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -972,7 +984,7 @@ class _RewardScreenState extends State<RewardScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('별을 사용해 이 테마를 열까요?'),
+            Text('별을 사용해 이 시계를 열까요?'),
             SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1174,7 +1186,7 @@ class _RewardScreenState extends State<RewardScreen> {
                             ? () => Navigator.pop(context)
                             : null,
                         child: Text(
-                          '컬렉션에 넣기',
+                          '내 시계에 넣기',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,

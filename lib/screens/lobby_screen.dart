@@ -2,6 +2,8 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../models/clock_theme.dart';
 import '../models/clock_time.dart';
+import '../models/quiz_level.dart';
+import '../services/reward_service.dart';
 import '../utils/colors.dart';
 import '../widgets/analog_clock.dart';
 import '../widgets/glass_container.dart';
@@ -23,6 +25,8 @@ class LobbyScreen extends StatefulWidget {
 class _LobbyScreenState extends State<LobbyScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _motionController;
+  QuizLevel _recommendedLevel = QuizLevel.level1;
+  var _completedLevelCount = 0;
 
   @override
   void initState() {
@@ -31,12 +35,27 @@ class _LobbyScreenState extends State<LobbyScreen>
       vsync: this,
       duration: Duration(seconds: 8),
     )..repeat();
+    _loadPracticeProgress();
   }
 
   @override
   void dispose() {
     _motionController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadPracticeProgress() async {
+    final completedLevels = await RewardService.getCompletedLevels();
+    final nextLevel = QuizLevel.values.firstWhere(
+      (level) => !completedLevels.contains(level.number),
+      orElse: () => QuizLevel.level5,
+    );
+
+    if (!mounted) return;
+    setState(() {
+      _recommendedLevel = nextLevel;
+      _completedLevelCount = completedLevels.length;
+    });
   }
 
   @override
@@ -95,7 +114,7 @@ class _LobbyScreenState extends State<LobbyScreen>
                   context,
                   icon: Icons.grid_view_rounded,
                   label: '내 시계들',
-                  subtitle: '모은 시계 페이스를 살펴봐요',
+                  subtitle: '모은 시계를 살펴봐요',
                   color: AppColors.appleYellow,
                   onTap: () {
                     Navigator.push(
@@ -144,7 +163,7 @@ class _LobbyScreenState extends State<LobbyScreen>
           ],
         ),
         content: Text(
-          '학습 기록과 별, 선택한 테마는 기기에만 저장됩니다.\n\n'
+          '학습 기록과 별, 선택한 시계는 기기에만 저장됩니다.\n\n'
           '광고, 계정 가입, 외부 전송 없이 사용할 수 있습니다.\n\n'
           '문의: yeajunss@naver.com',
           style: TextStyle(height: 1.45),
@@ -230,12 +249,23 @@ class _LobbyScreenState extends State<LobbyScreen>
   }
 
   Widget _buildDailyPracticeCard(BuildContext context) {
+    final allLevelsComplete = _completedLevelCount >= QuizLevel.values.length;
+    final title = allLevelsComplete
+        ? '마스터 복습하기'
+        : '레벨 ${_recommendedLevel.number} 이어 하기';
+    final subtitle = allLevelsComplete
+        ? '어려운 시간도 다시 연습해요'
+        : '${_recommendedLevel.description} 문제 5개';
+
     return GlassContainer(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        await Navigator.push(
           context,
-          MaterialPageRoute(builder: (context) => QuizScreen()),
+          MaterialPageRoute(
+            builder: (context) => QuizScreen(initialLevel: _recommendedLevel),
+          ),
         );
+        _loadPracticeProgress();
       },
       width: _cardWidth(context),
       height: 88,
@@ -265,7 +295,7 @@ class _LobbyScreenState extends State<LobbyScreen>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  '오늘 문제 풀기',
+                  title,
                   style: TextStyle(
                     fontSize: 21,
                     fontWeight: FontWeight.w900,
@@ -275,7 +305,7 @@ class _LobbyScreenState extends State<LobbyScreen>
                 ),
                 SizedBox(height: 4),
                 Text(
-                  '문제 5개를 풀고 별을 모아요',
+                  subtitle,
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
