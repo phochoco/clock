@@ -1,4 +1,4 @@
-package com.example.myclock
+package com.tictacktreasure.clock
 
 import io.flutter.embedding.android.FlutterActivity
 
