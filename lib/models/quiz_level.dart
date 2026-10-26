@@ -11,6 +11,20 @@ enum QuizLevel {
   level5, // 마의 구간 (시침이 다음 숫자 근접)
 }
 
+/// 아직 완료하지 않은 첫 레벨 (모두 완료했으면 마지막 레벨)
+QuizLevel nextLevelToPlay(Set<int> completedLevels) {
+  return QuizLevel.values.firstWhere(
+    (level) => !completedLevels.contains(level.number),
+    orElse: () => QuizLevel.level5,
+  );
+}
+
+/// 보물섬 지도 순서대로 열린 레벨인지 (완료했거나 다음 차례까지)
+bool isLevelOpen(QuizLevel level, Set<int> completedLevels) {
+  return completedLevels.contains(level.number) ||
+      level.index <= nextLevelToPlay(completedLevels).index;
+}
+
 extension QuizLevelExtension on QuizLevel {
   /// 레벨 이름
   String get name {

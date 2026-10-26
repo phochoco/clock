@@ -3,6 +3,7 @@ import '../models/quiz_level.dart';
 import '../services/reward_service.dart';
 import '../services/tts_service.dart';
 import '../utils/colors.dart';
+import '../widgets/island_ui.dart';
 import '../widgets/treasure_map.dart';
 import 'playground_screen.dart';
 import 'game_mode_screen.dart';
@@ -18,9 +19,7 @@ class LobbyScreen extends StatefulWidget {
   State<LobbyScreen> createState() => _LobbyScreenState();
 }
 
-class _LobbyScreenState extends State<LobbyScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _motionController;
+class _LobbyScreenState extends State<LobbyScreen> {
   QuizLevel _recommendedLevel = QuizLevel.level1;
   Set<int> _completedLevels = {};
   var _totalStars = 0;
@@ -32,26 +31,13 @@ class _LobbyScreenState extends State<LobbyScreen>
   @override
   void initState() {
     super.initState();
-    _motionController = AnimationController(
-      vsync: this,
-      duration: Duration(seconds: 2),
-    )..repeat(reverse: true);
     _loadPracticeProgress();
-  }
-
-  @override
-  void dispose() {
-    _motionController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadPracticeProgress() async {
     final completedLevels = await RewardService.getCompletedLevels();
     final totalStars = await RewardService.getTotalStars();
-    final nextLevel = QuizLevel.values.firstWhere(
-      (level) => !completedLevels.contains(level.number),
-      orElse: () => QuizLevel.level5,
-    );
+    final nextLevel = nextLevelToPlay(completedLevels.toSet());
 
     if (!mounted) return;
     setState(() {
@@ -94,45 +80,27 @@ class _LobbyScreenState extends State<LobbyScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.mapSea,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/map/sea_bg.jpg',
-              fit: BoxFit.cover,
-              alignment: Alignment.topCenter,
-              errorBuilder: (_, _, _) => DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [AppColors.mapSea, AppColors.mapSeaDeep],
+      body: IslandSeaBackground(
+        child: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(),
+              Expanded(
+                child: Padding(
+                  padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
+                  child: TreasureMap(
+                    completedLevels: _completedLevels,
+                    currentLevel: _recommendedLevel,
+                    onIslandTap: _onIslandTap,
                   ),
                 ),
               ),
-            ),
+              _buildMascotRow(),
+              _buildBottomBar(),
+              SizedBox(height: 12),
+            ],
           ),
-          SafeArea(
-            child: Column(
-              children: [
-                _buildHeader(),
-                Expanded(
-                  child: Padding(
-                    padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
-                    child: TreasureMap(
-                      completedLevels: _completedLevels,
-                      currentLevel: _recommendedLevel,
-                      onIslandTap: _onIslandTap,
-                    ),
-                  ),
-                ),
-                _buildMascotRow(),
-                _buildBottomBar(),
-                SizedBox(height: 12),
-              ],
-            ),
-          ),
-        ],
+        ),
       ),
     );
   }
@@ -147,7 +115,7 @@ class _LobbyScreenState extends State<LobbyScreen>
             width: 84,
             child: Align(
               alignment: Alignment.centerLeft,
-              child: _CircleIconButton(
+              child: SandIconButton(
                 tooltip: '보호자 안내',
                 icon: Icons.shield_outlined,
                 onPressed: _showGuardianInfoDialog,
@@ -202,30 +170,17 @@ class _LobbyScreenState extends State<LobbyScreen>
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            GestureDetector(
+            Jjakkagi(
+              pose: MascotPose.wave,
               onTap: () => _say(_defaultMascotLine),
-              child: AnimatedBuilder(
-                animation: _motionController,
-                builder: (context, child) => Transform.translate(
-                  offset: Offset(
-                    0,
-                    -4 * Curves.easeInOut.transform(_motionController.value),
-                  ),
-                  child: child,
-                ),
-                child: Image.asset(
-                  'assets/images/mascot/wave.png',
-                  height: 100,
-                  semanticLabel: '앵무새 째깍이',
-                  errorBuilder: (_, _, _) => SizedBox(width: 90),
-                ),
-              ),
             ),
             SizedBox(width: 4),
             Flexible(
               child: Padding(
                 padding: EdgeInsets.only(bottom: 44),
-                child: _SpeechBubble(text: _mascotLine ?? _defaultMascotLine),
+                child: IslandSpeechBubble(
+                  text: _mascotLine ?? _defaultMascotLine,
+                ),
               ),
             ),
             SizedBox(width: 8),
@@ -391,73 +346,6 @@ class _StarCounter extends StatelessWidget {
   }
 }
 
-class _CircleIconButton extends StatelessWidget {
-  const _CircleIconButton({
-    required this.tooltip,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  final String tooltip;
-  final IconData icon;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return IconButton(
-      tooltip: tooltip,
-      onPressed: onPressed,
-      style: IconButton.styleFrom(
-        backgroundColor: Colors.white.withValues(alpha: 0.85),
-      ),
-      icon: Icon(icon, color: AppColors.woodDark, size: 22),
-    );
-  }
-}
-
-class _SpeechBubble extends StatelessWidget {
-  const _SpeechBubble({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedSwitcher(
-      duration: Duration(milliseconds: 250),
-      child: Container(
-        key: ValueKey(text),
-        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(18),
-            topRight: Radius.circular(18),
-            bottomRight: Radius.circular(18),
-            bottomLeft: Radius.circular(4),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.18),
-              blurRadius: 8,
-              offset: Offset(0, 3),
-            ),
-          ],
-        ),
-        child: Text(
-          text,
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w800,
-            color: AppColors.woodDark,
-            height: 1.3,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// 아이 손가락에 맞춘 큰 원형 메뉴 버튼 (아래에 이름표)
 class _RoundMenuButton extends StatelessWidget {
   const _RoundMenuButton({
     required this.icon,

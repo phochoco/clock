@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import '../models/clock_time.dart';
@@ -8,13 +9,15 @@ import '../models/clock_theme.dart';
 import '../services/reward_service.dart';
 import '../services/theme_service.dart';
 import '../services/tts_service.dart';
+import '../utils/clock_hint.dart';
 import '../utils/colors.dart';
 import '../utils/haptic.dart';
 import '../widgets/analog_clock.dart';
-import '../widgets/mesh_background.dart';
+import '../widgets/island_ui.dart';
+import '../widgets/treasure_map.dart';
 
 /// 퀴즈 모드 화면
-/// 5단계 레벨 시스템으로 시계 읽기 연습
+/// 보물섬 지도의 섬(레벨)마다 5문제씩 시계를 맞추는 탐험
 class QuizScreen extends StatefulWidget {
   const QuizScreen({super.key, this.initialLevel = QuizLevel.level1});
 
@@ -26,6 +29,7 @@ class QuizScreen extends StatefulWidget {
 
 class _QuizScreenState extends State<QuizScreen> {
   static const int questionsPerLevel = 5; // 레벨당 문제 수
+  static const _idleLine = '바늘을 돌려서 맞춰 봐!';
 
   late final QuizSession _session;
   var _isSavingAnswer = false;
@@ -38,12 +42,22 @@ class _QuizScreenState extends State<QuizScreen> {
   // 오디오 플레이어
   final AudioPlayer _audioPlayer = AudioPlayer();
 
+  // 지도와 같은 잠금 기준
+  Set<int> _completedLevels = {};
+
+  // 째깍이 반응
+  MascotPose _mascotPose = MascotPose.point;
+  String _mascotLine = _idleLine;
+
+  TreasureIsland get _island => TreasureIsland.of(_session.currentLevel);
+
   @override
   void initState() {
     super.initState();
     _session = QuizSession(questionsPerLevel: questionsPerLevel);
     _session.start(level: widget.initialLevel);
     _loadTheme();
+    _loadCompletedLevels();
     _initTts();
     _speakCurrentQuestion();
   }
@@ -67,6 +81,22 @@ class _QuizScreenState extends State<QuizScreen> {
     });
   }
 
+  Future<void> _loadCompletedLevels() async {
+    final completed = await RewardService.getCompletedLevels();
+    if (!mounted) return;
+    setState(() => _completedLevels = completed.toSet());
+  }
+
+  bool _isOpen(QuizLevel level) =>
+      level == widget.initialLevel || isLevelOpen(level, _completedLevels);
+
+  void _setMascot(MascotPose pose, String line) {
+    setState(() {
+      _mascotPose = pose;
+      _mascotLine = line;
+    });
+  }
+
   void _speakCurrentQuestion() {
     final question = _session.currentQuestion;
     if (question == null) return;
@@ -78,18 +108,33 @@ class _QuizScreenState extends State<QuizScreen> {
     });
   }
 
+  void _resetClock() {
+    _clockKey.currentState?.setTime(ClockTime(hour: 12, minute: 0));
+  }
+
   void _nextQuestion() {
     setState(() {
       _session.nextQuestion();
-      _clockKey.currentState?.setTime(ClockTime(hour: 12, minute: 0));
+      _resetClock();
+      _mascotPose = MascotPose.point;
+      _mascotLine = _idleLine;
     });
     _speakCurrentQuestion();
   }
 
   void _switchLevel(QuizLevel level) {
+    if (!_isOpen(level)) {
+      final previous = TreasureIsland.of(level.previous!);
+      HapticHelper.vibrate();
+      _setMascot(MascotPose.think, '${previous.name}부터 탐험해 줘!');
+      TtsService.speak(_mascotLine);
+      return;
+    }
     setState(() {
       _session.switchLevel(level);
-      _clockKey.currentState?.setTime(ClockTime(hour: 12, minute: 0));
+      _resetClock();
+      _mascotPose = MascotPose.point;
+      _mascotLine = '${TreasureIsland.of(level).name}에 도착했어!';
     });
     _speakCurrentQuestion();
   }
@@ -97,25 +142,35 @@ class _QuizScreenState extends State<QuizScreen> {
   void _retryQuestion() {
     setState(() {
       _session.retryQuestion();
-      _clockKey.currentState?.setTime(ClockTime(hour: 12, minute: 0));
+      _resetClock();
+      _mascotPose = MascotPose.point;
+      _mascotLine = _idleLine;
     });
   }
 
   Future<void> _checkAnswer() async {
-    if (_isSavingAnswer ||
-        _session.userAnswer == null ||
-        _session.currentQuestion == null) {
+    final question = _session.currentQuestion;
+    final answer = _session.userAnswer;
+    if (_isSavingAnswer || answer == null || question == null) {
       return;
     }
 
-    final result = _session.answer(_session.userAnswer!);
+    final result = _session.answer(answer);
     setState(() => _isSavingAnswer = result.isCorrect);
 
     if (result.isCorrect) {
+      final combo = _session.showCombo ? ' ${_session.comboMessage}' : '';
+      _setMascot(MascotPose.cheer, '정답이야! 별 +${result.earnedStars}$combo');
       await RewardService.addStars(result.earnedStars);
       await _audioPlayer.play(AssetSource('good/good.mp3'));
       HapticHelper.heavyImpact();
     } else {
+      final hint = ClockHint.forAnswer(
+        answer,
+        ClockTime(hour: question.hour, minute: question.minute),
+      );
+      _setMascot(MascotPose.think, hint);
+      TtsService.speak(hint);
       HapticHelper.vibrate();
     }
 
@@ -124,200 +179,108 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   void _showLevelCompleteDialog() async {
+    final level = _session.currentLevel;
+    final island = _island;
+    final score = _session.score;
+
     // 레벨 완료 기록
-    await RewardService.completeLevel(_session.currentLevel.number);
+    await RewardService.completeLevel(level.number);
 
     // 완벽한 클리어 보너스 (5/5 정답)
-    if (_session.score == questionsPerLevel) {
+    if (score == questionsPerLevel) {
       await RewardService.addStars(3); // 보너스 별 3개
     }
 
     // 보물 획득
-    final reward = RewardList.getRewardForLevel(_session.currentLevel.number);
+    final reward = RewardList.getRewardForLevel(level.number);
     if (reward != null) {
       await RewardService.unlockReward(reward.id);
     }
 
     if (!mounted) return;
+    setState(() {
+      _completedLevels = {..._completedLevels, level.number};
+      _mascotPose = MascotPose.treasure;
+    });
+
+    final nextLevel = level.next;
+    final title = nextLevel == null ? '모든 섬을 탐험했어요!' : '${island.name} 탐험 완료!';
+    TtsService.speak(title);
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Text('🎉 레벨 완료!'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '$questionsPerLevel문제 중 ${_session.score}문제를 맞췄습니다!',
-              textAlign: TextAlign.center,
-            ),
-            if (reward != null) ...[
-              SizedBox(height: 20),
-              Container(
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppColors.warning.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
+      builder: (context) => _TreasureDialog(
+        title: title,
+        message: nextLevel == null
+            ? '레벨 1부터 레벨 5까지\n모두 성공하였습니다!'
+            : '$questionsPerLevel문제 중 $score문제를 맞췄어요!',
+        score: score,
+        total: questionsPerLevel,
+        reward: reward,
+        badgeColor: island.badgeColor,
+        actions: nextLevel == null
+            ? [
+                ChunkyButton(
+                  label: '지도로 돌아가기',
+                  icon: Icons.map_rounded,
+                  onTap: () {
+                    Navigator.pop(context); // 다이얼로그 닫기
+                    Navigator.pop(this.context); // 퀴즈 화면 닫기
+                  },
                 ),
-                child: Column(
-                  children: [
-                    Icon(reward.icon, size: 48, color: reward.iconColor),
-                    SizedBox(height: 8),
-                    Text(
-                      '${reward.name} 받았어요!',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.textDark,
-                      ),
-                    ),
-                  ],
+              ]
+            : [
+                ChunkyButton(
+                  label: '다음 섬으로',
+                  icon: Icons.sailing_rounded,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _switchLevel(nextLevel);
+                  },
                 ),
-              ),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              // 현재 레벨 다시 시작
-              setState(() {
-                _session.switchLevel(_session.currentLevel);
-                _clockKey.currentState?.setTime(ClockTime(hour: 12, minute: 0));
-              });
-              _speakCurrentQuestion();
-            },
-            child: Text('다시 하기'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              final nextLevel = _session.currentLevel.next;
-              if (nextLevel != null) {
-                setState(() {
-                  _session.switchLevel(nextLevel);
-                  _clockKey.currentState?.setTime(
-                    ClockTime(hour: 12, minute: 0),
-                  );
-                });
-                _speakCurrentQuestion();
-              } else {
-                // 마지막 레벨 완료 - 특별 축하 메시지
-                _showAllLevelsCompleteDialog();
-              }
-            },
-            child: Text('다음 레벨'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showAllLevelsCompleteDialog() {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Column(
-          children: [
-            Text('🎊', style: TextStyle(fontSize: 60)),
-            SizedBox(height: 8),
-            Text(
-              '모든 레벨 완료!',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textDark,
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '축하합니다!',
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textDark,
-              ),
-            ),
-            SizedBox(height: 12),
-            Text(
-              '레벨 1부터 레벨 5까지\n모두 성공하였습니다!',
-              style: TextStyle(fontSize: 16, color: AppColors.textLight),
-              textAlign: TextAlign.center,
-            ),
-            SizedBox(height: 20),
-            Container(
-              padding: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.warning.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  Text('🎁', style: TextStyle(fontSize: 48)),
-                  SizedBox(height: 8),
-                  Text(
-                    '모든 무료 시계를\n열었습니다!',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context); // 다이얼로그 닫기
-              Navigator.pop(context); // 퀴즈 화면 닫기
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.appleBlue,
-              minimumSize: Size(double.infinity, 50),
-            ),
-            child: Text(
-              '확인',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
-            ),
-          ),
-        ],
+                SizedBox(height: 10),
+                ChunkyButton(
+                  label: '다시 하기',
+                  height: 52,
+                  topColor: AppColors.mapSand,
+                  bottomColor: Color(0xFFF3DDAF),
+                  textColor: AppColors.woodDark,
+                  onTap: () {
+                    Navigator.pop(context);
+                    _switchLevel(level);
+                  },
+                ),
+              ],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final clockSize = math.min(270.0, MediaQuery.of(context).size.width - 90);
+
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
-      body: MeshBackground(
+      backgroundColor: AppColors.mapSea,
+      body: IslandSeaBackground(
         child: SafeArea(
           child: SingleChildScrollView(
             child: Column(
               children: [
                 _buildTopBar(),
-                SizedBox(height: 20),
-                _buildLevelSelector(),
-                SizedBox(height: 20),
-                _buildQuestionArea(),
-                SizedBox(height: 20),
-                if (!_session.showResult) _buildCheckButton(),
-                if (_session.showResult) _buildResultArea(),
+                SizedBox(height: 4),
+                _buildIslandTabs(),
+                SizedBox(height: 14),
+                _buildQuestionCard(),
+                SizedBox(height: 16),
+                _buildClock(clockSize),
+                SizedBox(height: 8),
+                _buildMascotRow(),
+                SizedBox(height: 10),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 24),
+                  child: _buildActionButton(),
+                ),
                 SizedBox(height: 20),
               ],
             ),
@@ -328,39 +291,110 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   Widget _buildTopBar() {
+    final island = _island;
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.fromLTRB(12, 8, 12, 0),
       child: Row(
         children: [
-          IconButton(
-            icon: Icon(Icons.arrow_back_rounded, size: 28),
-            color: AppColors.textDark,
+          SandIconButton(
+            tooltip: '지도로 돌아가기',
+            icon: Icons.arrow_back_rounded,
             onPressed: () => Navigator.pop(context),
           ),
           Expanded(
-            child: Text(
-              '퀴즈 도전',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textDark,
+            child: Center(
+              child: Container(
+                padding: EdgeInsets.fromLTRB(6, 4, 14, 4),
+                decoration: BoxDecoration(
+                  color: AppColors.mapSand,
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(color: AppColors.woodLight, width: 2),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Image.asset(
+                      island.asset,
+                      width: 36,
+                      height: 36,
+                      errorBuilder: (_, _, _) => SizedBox(width: 36),
+                    ),
+                    SizedBox(width: 6),
+                    Text(
+                      '${island.level.number}번 ${island.name}',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.woodDark,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: AppColors.success,
-              borderRadius: BorderRadius.circular(12),
+          _ScoreChests(score: _session.score, total: questionsPerLevel),
+        ],
+      ),
+    );
+  }
+
+  /// 섬 번호 탭 (지도와 같은 기준으로 잠금)
+  Widget _buildIslandTabs() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        for (final level in QuizLevel.values)
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 5),
+            child: _IslandTab(
+              island: TreasureIsland.of(level),
+              selected: level == _session.currentLevel,
+              locked: !_isOpen(level),
+              completed: _completedLevels.contains(level.number),
+              onTap: () => _switchLevel(level),
             ),
-            child: Text(
-              '${_session.score} / $questionsPerLevel',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildQuestionCard() {
+    final question = _session.currentQuestion;
+    if (question == null) return SizedBox();
+
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: 32),
+      padding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+      decoration: BoxDecoration(
+        color: AppColors.mapSand,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: AppColors.woodLight, width: 3),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.woodDark.withValues(alpha: 0.35),
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Text(
+            '이 시간을 만들어봐요!',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w800,
+              color: AppColors.wood,
+            ),
+          ),
+          SizedBox(height: 4),
+          Text(
+            question.answerText,
+            style: TextStyle(
+              fontSize: 38,
+              fontWeight: FontWeight.w900,
+              color: _island.badgeColor,
+              height: 1.15,
             ),
           ),
         ],
@@ -368,299 +402,326 @@ class _QuizScreenState extends State<QuizScreen> {
     );
   }
 
-  Widget _buildLevelSelector() {
-    return SizedBox(
-      height: 60,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: EdgeInsets.symmetric(horizontal: 16),
-        itemCount: QuizLevel.values.length,
-        itemBuilder: (context, index) {
-          final level = QuizLevel.values[index];
-          final isSelected = level == _session.currentLevel;
-
-          return GestureDetector(
-            onTap: () => _switchLevel(level),
-            child: Container(
-              margin: EdgeInsets.only(right: 12),
-              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-              decoration: BoxDecoration(
-                color: isSelected ? AppColors.appleBlue : Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.1),
-                    blurRadius: 6,
-                    offset: Offset(0, 3),
-                  ),
-                ],
-              ),
-              child: Center(
-                child: Text(
-                  'Lv.${level.number}',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: isSelected ? Colors.white : AppColors.textDark,
-                  ),
-                ),
-              ),
-            ),
-          );
+  Widget _buildClock(double size) {
+    return Container(
+      width: size + 20,
+      height: size + 20,
+      padding: EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: Colors.white.withValues(alpha: 0.35),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.white.withValues(alpha: 0.4),
+            blurRadius: 24,
+            spreadRadius: 4,
+          ),
+        ],
+      ),
+      child: AnalogClock(
+        key: _clockKey,
+        initialTime: ClockTime(hour: 12, minute: 0),
+        notifyInitialTime: false,
+        onTimeChanged: (time) {
+          setState(() {
+            _session.setAnswer(time);
+          });
         },
+        showGuideline: true,
+        showMinuteNumbers: _session.currentLevel.index >= 2,
+        theme: _selectedTheme, // 선택된 테마 적용
       ),
     );
   }
 
-  Widget _buildQuestionArea() {
-    if (_session.currentQuestion == null) return SizedBox();
+  Widget _buildMascotRow() {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Jjakkagi(
+            pose: _mascotPose,
+            height: 96,
+            onTap: () => TtsService.speak(_mascotLine),
+          ),
+          SizedBox(width: 6),
+          Flexible(child: IslandSpeechBubble(text: _mascotLine)),
+        ],
+      ),
+    );
+  }
 
-    return Column(
-      children: [
-        // 문제 텍스트
-        Container(
-          margin: EdgeInsets.symmetric(horizontal: 24),
-          padding: EdgeInsets.all(20),
+  Widget _buildActionButton() {
+    if (!_session.showResult) {
+      final canCheck = _session.userAnswer != null && !_isSavingAnswer;
+      return ChunkyButton(
+        label: '정답 확인',
+        icon: Icons.check_rounded,
+        onTap: canCheck ? _checkAnswer : null,
+      );
+    }
+
+    if (_session.isCorrect) {
+      final levelDone = _session.score >= questionsPerLevel;
+      return ChunkyButton(
+        label: _isSavingAnswer
+            ? '별 저장 중'
+            : levelDone
+            ? '보물상자 열기'
+            : '다음 문제',
+        icon: levelDone ? Icons.redeem_rounded : Icons.arrow_forward_rounded,
+        topColor: Color(0xFF4CD964),
+        bottomColor: Color(0xFF1FA34A),
+        onTap: _isSavingAnswer
+            ? null
+            : levelDone
+            ? _showLevelCompleteDialog
+            : _nextQuestion,
+      );
+    }
+
+    return ChunkyButton(
+      label: '다시 해볼게',
+      icon: Icons.refresh_rounded,
+      topColor: AppColors.mapGlow,
+      bottomColor: AppColors.mapStar,
+      textColor: AppColors.woodDark,
+      onTap: _retryQuestion,
+    );
+  }
+}
+
+/// 이번 섬에서 맞힌 문제 수를 별 5칸으로 표시
+class _ScoreChests extends StatelessWidget {
+  const _ScoreChests({required this.score, required this.total});
+
+  final int score;
+  final int total;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: '$total문제 중 $score문제 맞힘',
+      excludeSemantics: true,
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.85),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [for (var i = 0; i < 3; i++) _star(i < score)],
+            ),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [for (var i = 3; i < total; i++) _star(i < score)],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _star(bool filled) {
+    return Icon(
+      Icons.star_rounded,
+      size: 15,
+      color: filled
+          ? AppColors.mapStar
+          : AppColors.woodLight.withValues(alpha: 0.35),
+    );
+  }
+}
+
+class _IslandTab extends StatelessWidget {
+  const _IslandTab({
+    required this.island,
+    required this.selected,
+    required this.locked,
+    required this.completed,
+    required this.onTap,
+  });
+
+  final TreasureIsland island;
+  final bool selected;
+  final bool locked;
+  final bool completed;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = locked
+        ? '잠김'
+        : completed
+        ? '완료'
+        : '열림';
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '${island.level.number}번 ${island.name} $state',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: Duration(milliseconds: 200),
+          width: selected ? 54 : 46,
+          height: selected ? 54 : 46,
           decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
+            color: locked ? AppColors.mapLock : island.badgeColor,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: selected ? AppColors.mapGlow : Colors.white,
+              width: selected ? 4 : 3,
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 10,
-                offset: Offset(0, 4),
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 6,
+                offset: Offset(0, 3),
               ),
             ],
           ),
-          child: Column(
+          child: Stack(
+            clipBehavior: Clip.none,
+            alignment: Alignment.center,
             children: [
-              Text(
-                '이 시간을 만들어봐요!',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textDark,
-                ),
-              ),
-              SizedBox(height: 12),
-              Text(
-                _session.currentQuestion!.answerText,
-                style: TextStyle(
-                  fontSize: 36,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.appleBlue,
-                ),
-              ),
-            ],
-          ),
-        ),
-
-        SizedBox(height: 30),
-
-        // 시계
-        SizedBox(
-          width: 280,
-          height: 280,
-          child: AnalogClock(
-            key: _clockKey,
-            initialTime: ClockTime(hour: 12, minute: 0),
-            notifyInitialTime: false,
-            onTimeChanged: (time) {
-              setState(() {
-                _session.setAnswer(time);
-              });
-            },
-            showGuideline: true,
-            showMinuteNumbers: _session.currentLevel.index >= 2,
-            theme: _selectedTheme, // 선택된 테마 적용
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCheckButton() {
-    final canCheck = _session.userAnswer != null && !_isSavingAnswer;
-
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 24),
-      child: GestureDetector(
-        onTap: canCheck ? _checkAnswer : null,
-        child: Container(
-          width: double.infinity,
-          height: 60,
-          decoration: BoxDecoration(
-            color: canCheck ? AppColors.minuteBlue : Colors.grey[300],
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: canCheck
-                ? [
-                    BoxShadow(
-                      color: AppColors.minuteBlue.withValues(alpha: 0.4),
-                      blurRadius: 10,
-                      offset: Offset(0, 4),
+              locked
+                  ? Icon(Icons.lock_rounded, color: Colors.white, size: 20)
+                  : Text(
+                      '${island.level.number}',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                      ),
                     ),
-                  ]
-                : [],
-          ),
-          child: Center(
-            child: Text(
-              '정답 확인',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: canCheck ? Colors.white : Colors.grey[500],
-              ),
-            ),
+              if (completed)
+                Positioned(
+                  right: -6,
+                  top: -6,
+                  child: Icon(
+                    Icons.star_rounded,
+                    size: 20,
+                    color: AppColors.mapStar,
+                    shadows: [Shadow(color: AppColors.woodDark, blurRadius: 2)],
+                  ),
+                ),
+            ],
           ),
         ),
       ),
     );
   }
+}
 
-  Widget _buildResultArea() {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 24),
-      child: _session.isCorrect
-          ? // 정답일 때: 메시지와 버튼을 하나의 박스로 통합
-            Container(
-              decoration: BoxDecoration(
-                color: AppColors.success,
-                borderRadius: BorderRadius.circular(20),
+/// 섬 탐험 완료 보물상자 다이얼로그
+class _TreasureDialog extends StatelessWidget {
+  const _TreasureDialog({
+    required this.title,
+    required this.message,
+    required this.score,
+    required this.total,
+    required this.reward,
+    required this.badgeColor,
+    required this.actions,
+  });
+
+  final String title;
+  final String message;
+  final int score;
+  final int total;
+  final Reward? reward;
+  final Color badgeColor;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    final reward = this.reward;
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: EdgeInsets.symmetric(horizontal: 24),
+      child: Container(
+        padding: EdgeInsets.fromLTRB(20, 16, 20, 20),
+        decoration: BoxDecoration(
+          color: AppColors.mapSand,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: AppColors.woodLight, width: 4),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Jjakkagi(pose: MascotPose.treasure, height: 120),
+            SizedBox(height: 6),
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                color: badgeColor,
               ),
-              child: Column(
-                children: [
-                  // 상단: 정답 메시지 영역 (모두 한 줄로)
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(20, 16, 20, 12),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.check_circle, color: Colors.white, size: 22),
-                        SizedBox(width: 6),
-                        Text(
-                          '정답이에요!',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        SizedBox(width: 6),
-                        Text(
-                          '⭐ +${_session.lastEarnedStars}',
-                          style: TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                        // 콤보 메시지도 같은 줄에
-                        if (_session.showCombo) ...[
-                          SizedBox(width: 6),
-                          Text(
-                            _session.comboMessage,
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  // 하단: 다음 버튼
-                  Padding(
-                    padding: EdgeInsets.fromLTRB(16, 0, 16, 16),
-                    child: GestureDetector(
-                      onTap: _isSavingAnswer
-                          ? null
-                          : () {
-                              // 5문제 완료 체크
-                              if (_session.score >= questionsPerLevel) {
-                                // 레벨 완료!
-                                _showLevelCompleteDialog();
-                              } else {
-                                // 다음 문제
-                                _nextQuestion();
-                              }
-                            },
-                      child: Container(
-                        width: double.infinity,
-                        height: 54,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(14),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.15),
-                              blurRadius: 8,
-                              offset: Offset(0, 3),
-                            ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Text(
-                            _isSavingAnswer ? '별 저장 중' : '다음 문제',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.success,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            )
-          : // 오답일 때: 기존 방식 유지
-            Column(
+            ),
+            SizedBox(height: 6),
+            Row(
+              mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  '다시 한번 해볼까요? 😊',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.error,
+                for (var i = 0; i < total; i++)
+                  Icon(
+                    Icons.star_rounded,
+                    size: 30,
+                    color: i < score
+                        ? AppColors.mapStar
+                        : AppColors.woodLight.withValues(alpha: 0.35),
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 16),
-                GestureDetector(
-                  onTap: () {
-                    // 오답일 때: 다시 시도 (결과만 숨김 + 시계 리셋)
-                    _retryQuestion();
-                  },
-                  child: Container(
-                    width: double.infinity,
-                    height: 60,
-                    decoration: BoxDecoration(
-                      color: AppColors.warning,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppColors.warning.withValues(alpha: 0.4),
-                          blurRadius: 10,
-                          offset: Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Center(
-                      child: Text(
-                        '다시 시도',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textDark,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
               ],
             ),
+            SizedBox(height: 6),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: AppColors.woodDark,
+                height: 1.4,
+              ),
+            ),
+            if (reward != null) ...[
+              SizedBox(height: 14),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.mapStar, width: 2),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(reward.icon, size: 36, color: reward.iconColor),
+                    SizedBox(width: 10),
+                    Text(
+                      '${reward.name} 받았어요!',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.woodDark,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+            SizedBox(height: 18),
+            ...actions,
+          ],
+        ),
+      ),
     );
   }
 }
