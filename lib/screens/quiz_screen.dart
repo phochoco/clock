@@ -185,8 +185,11 @@ class _QuizScreenState extends State<QuizScreen> {
     final island = _island;
     final score = _session.score;
 
-    // 레벨 완료 기록
-    await RewardService.completeLevel(level.number);
+    // 레벨 완료 기록 (처음 깬 섬이면 첫 탐험 보너스)
+    final firstClear = await RewardService.completeLevel(level.number);
+    if (firstClear) {
+      await RewardService.addStars(RewardService.firstClearBonusStars);
+    }
 
     // 완벽한 클리어 보너스 (5/5 정답)
     if (score == questionsPerLevel) {
@@ -221,6 +224,10 @@ class _QuizScreenState extends State<QuizScreen> {
             : '$questionsPerLevel문제 중 $score문제를 맞췄어요!',
         score: score,
         total: questionsPerLevel,
+        bonuses: [
+          if (firstClear) '첫 탐험 보너스 별 ${RewardService.firstClearBonusStars}개',
+          if (score == questionsPerLevel) '만점 보너스 별 3개',
+        ],
         reward: reward,
         badgeColor: island.badgeColor,
         actions: nextLevel == null
@@ -583,6 +590,7 @@ class _TreasureDialog extends StatelessWidget {
     required this.message,
     required this.score,
     required this.total,
+    required this.bonuses,
     required this.reward,
     required this.badgeColor,
     required this.actions,
@@ -592,6 +600,7 @@ class _TreasureDialog extends StatelessWidget {
   final String message;
   final int score;
   final int total;
+  final List<String> bonuses;
   final Reward? reward;
   final Color badgeColor;
   final List<Widget> actions;
@@ -648,6 +657,36 @@ class _TreasureDialog extends StatelessWidget {
                 height: 1.4,
               ),
             ),
+            for (final bonus in bonuses) ...[
+              SizedBox(height: 8),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppColors.mapGlow,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.mapStar, width: 2),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.star_rounded,
+                      size: 20,
+                      color: AppColors.treasureOrangeDeep,
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      bonus,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.woodDark,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             if (reward != null) ...[
               SizedBox(height: 14),
               Container(

@@ -48,15 +48,18 @@ class RewardService {
     return jsonList.cast<int>();
   }
 
-  /// 레벨 완료 기록
-  static Future<void> completeLevel(int level) async {
+  /// 섬(레벨)을 처음 깼을 때 주는 별
+  static const firstClearBonusStars = 20;
+
+  /// 레벨 완료 기록. 처음 깬 레벨이면 true
+  static Future<bool> completeLevel(int level) async {
     final prefs = await SharedPreferences.getInstance();
     final completedLevels = await getCompletedLevels();
 
-    if (!completedLevels.contains(level)) {
-      completedLevels.add(level);
-      await prefs.setString(_completedLevelsKey, json.encode(completedLevels));
-    }
+    if (completedLevels.contains(level)) return false;
+    completedLevels.add(level);
+    await prefs.setString(_completedLevelsKey, json.encode(completedLevels));
+    return true;
   }
 
   /// 특정 보물이 해금되었는지 확인

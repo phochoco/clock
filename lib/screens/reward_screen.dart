@@ -278,6 +278,7 @@ class _RewardScreenState extends State<RewardScreen> {
           ),
           child: Stack(
             clipBehavior: Clip.none,
+            fit: StackFit.expand,
             children: [
               Column(
                 children: [

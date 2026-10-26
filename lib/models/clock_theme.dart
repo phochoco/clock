@@ -149,7 +149,7 @@ class ClockThemeList {
     backgroundGradient: null,
     backgroundImage: 'assets/images/themes/golden_bg.jpg',
     isPremium: true,
-    starCost: 200,
+    starCost: 250,
   );
 
   /// 달빛 시계 (프리미엄)
@@ -163,7 +163,7 @@ class ClockThemeList {
     backgroundGradient: null,
     backgroundImage: 'assets/images/themes/moonlight_bg.jpg',
     isPremium: true,
-    starCost: 200,
+    starCost: 100,
   );
 
   /// 크리스탈 시계 (프리미엄)
@@ -177,7 +177,7 @@ class ClockThemeList {
     backgroundGradient: null,
     backgroundImage: 'assets/images/themes/crystal_bg.jpg',
     isPremium: true,
-    starCost: 200,
+    starCost: 210,
   );
 
   /// 서커스 시계 (프리미엄)
@@ -191,7 +191,7 @@ class ClockThemeList {
     backgroundGradient: null,
     backgroundImage: 'assets/images/themes/circus_bg.jpg',
     isPremium: true,
-    starCost: 200,
+    starCost: 140,
   );
 
   /// 공주 시계 (프리미엄)
@@ -205,7 +205,7 @@ class ClockThemeList {
     backgroundGradient: null,
     backgroundImage: 'assets/images/themes/princess_bg.jpg',
     isPremium: true,
-    starCost: 200,
+    starCost: 170,
   );
 
   /// 경찰관 시계 (프리미엄)
@@ -219,7 +219,7 @@ class ClockThemeList {
     backgroundGradient: null,
     backgroundImage: 'assets/images/themes/police_bg.jpg',
     isPremium: true,
-    starCost: 200,
+    starCost: 150,
   );
 
   /// 공룡 시계 (프리미엄)
@@ -233,7 +233,7 @@ class ClockThemeList {
     backgroundGradient: null,
     backgroundImage: 'assets/images/themes/dinosaur_bg.jpg',
     isPremium: true,
-    starCost: 200,
+    starCost: 190,
   );
 
   /// 우주선 시계 (프리미엄)
@@ -247,7 +247,7 @@ class ClockThemeList {
     backgroundGradient: null,
     backgroundImage: 'assets/images/themes/spaceship_bg.jpg',
     isPremium: true,
-    starCost: 200,
+    starCost: 230,
   );
 
   /// 사탕 시계 (프리미엄)
@@ -265,7 +265,7 @@ class ClockThemeList {
     ),
     backgroundImage: 'assets/images/themes/candy_bg.jpg',
     isPremium: true,
-    starCost: 200,
+    starCost: 120,
   );
 
   static const List<ClockTheme> all = [
