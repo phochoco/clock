@@ -9,6 +9,7 @@ class TreasureIsland {
     required this.level,
     required this.name,
     required this.asset,
+    required this.background,
     required this.badgeColor,
     required this.position,
   });
@@ -16,6 +17,9 @@ class TreasureIsland {
   final QuizLevel level;
   final String name;
   final String asset;
+
+  /// 이 섬의 퀴즈 화면 배경
+  final String background;
   final Color badgeColor;
 
   /// 지도 영역 안에서의 상대 위치 (0~1)
@@ -26,6 +30,7 @@ class TreasureIsland {
       level: QuizLevel.level1,
       name: '야자수 해변',
       asset: 'assets/images/map/island_1.png',
+      background: 'assets/images/islands/bg_1.jpg',
       badgeColor: Color(0xFFF0457A),
       position: Offset(0.27, 0.85),
     ),
@@ -33,6 +38,7 @@ class TreasureIsland {
       level: QuizLevel.level2,
       name: '버섯 숲',
       asset: 'assets/images/map/island_2.png',
+      background: 'assets/images/islands/bg_2.jpg',
       badgeColor: Color(0xFF2FB344),
       position: Offset(0.72, 0.67),
     ),
@@ -40,6 +46,7 @@ class TreasureIsland {
       level: QuizLevel.level3,
       name: '화산섬',
       asset: 'assets/images/map/island_3.png',
+      background: 'assets/images/islands/bg_3.jpg',
       badgeColor: Color(0xFFFF8A00),
       position: Offset(0.30, 0.48),
     ),
@@ -47,6 +54,7 @@ class TreasureIsland {
       level: QuizLevel.level4,
       name: '얼음섬',
       asset: 'assets/images/map/island_4.png',
+      background: 'assets/images/islands/bg_4.jpg',
       badgeColor: Color(0xFF3B6FE0),
       position: Offset(0.70, 0.30),
     ),
@@ -54,6 +62,7 @@ class TreasureIsland {
       level: QuizLevel.level5,
       name: '황금성',
       asset: 'assets/images/map/island_5.png',
+      background: 'assets/images/islands/bg_5.jpg',
       badgeColor: Color(0xFF8B4FD8),
       position: Offset(0.34, 0.12),
     ),

@@ -160,76 +160,65 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
   }
 
   void _showCompletionDialog(int stars, int streak) {
-    String bonusMessage = '';
+    String? bonusMessage;
     if (streak >= 30) {
-      bonusMessage = '🎉 30일 연속! +10 보너스!';
+      bonusMessage = '30일 연속 보너스 별 10개';
     } else if (streak >= 7) {
-      bonusMessage = '🔥 7일 연속! +5 보너스!';
+      bonusMessage = '7일 연속 보너스 별 5개';
     } else if (streak >= 3) {
-      bonusMessage = '✨ 3일 연속! +2 보너스!';
+      bonusMessage = '3일 연속 보너스 별 2개';
     }
+
+    Widget chip(String text) => Container(
+      margin: EdgeInsets.only(top: 6),
+      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+      decoration: BoxDecoration(
+        color: AppColors.mapGlow,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.mapStar, width: 2),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.star_rounded,
+            size: 20,
+            color: AppColors.treasureOrangeDeep,
+          ),
+          SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+              color: AppColors.woodDark,
+            ),
+          ),
+        ],
+      ),
+    );
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Text(
-          '🎊 챌린지 완료!',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textDark,
-          ),
-          textAlign: TextAlign.center,
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
+      builder: (dialogContext) => IslandDialog(
+        top: Jjakkagi(pose: MascotPose.cheer, height: 110),
+        title: '오늘의 도전 성공!',
+        message: '$streak일째 이어서 도전했어요!',
+        body: Column(
           children: [
-            Container(
-              padding: EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppColors.warning.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    '⭐ +$stars 별 획득!',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AppColors.textDark,
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    '🔥 $streak일 연속 출석',
-                    style: TextStyle(fontSize: 18, color: AppColors.textDark),
-                  ),
-                  if (bonusMessage.isNotEmpty) ...[
-                    SizedBox(height: 8),
-                    Text(
-                      bonusMessage,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: AppColors.hourRed,
-                      ),
-                    ),
-                  ],
-                ],
-              ),
-            ),
+            chip('별 $stars개를 받았어요!'),
+            if (bonusMessage != null) chip(bonusMessage),
           ],
         ),
         actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context); // 다이얼로그 닫기
+          ChunkyButton(
+            label: '확인',
+            icon: Icons.check_rounded,
+            onTap: () {
+              Navigator.pop(dialogContext); // 다이얼로그 닫기
               Navigator.pop(context); // 화면 닫기
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.hourRed),
-            child: Text('확인', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),

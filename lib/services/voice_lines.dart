@@ -17,6 +17,28 @@ class VoiceLines {
 
   static const quizIdle = '바늘을 돌려서 맞춰 봐!';
 
+  // 문제 방식별 안내
+  static const readPrompt = '시계가 가리키는 시각을 골라 봐!';
+
+  static const readHint = '긴 바늘이 가리키는 곳부터 살펴봐!';
+
+  static const digitalPrompt = '디지털 시계랑 똑같이 바늘을 맞춰 봐!';
+
+  static const bossIntro = '황금성의 보스 문제야! 이것만 풀면 보물이야!';
+
+  static const bossCleared = '보스 문제를 풀었어! 별 두 개를 더 줄게!';
+
+  /// 섬에 도착했을 때 째깍이가 들려주는 이야기 (섬 순서대로)
+  static const islandIntros = [
+    '야자수 해변에 도착했어! 정각을 맞춰서 보물 동굴 문을 열자!',
+    '버섯 숲 요정들이 시간을 잃어버렸대! 시계를 읽어서 도와주자!',
+    '화산이 부글부글! 디지털 시계도 보고 5분 단위로 맞춰 보자!',
+    '꽁꽁 얼음섬이야! 펭귄 친구들에게 1분까지 정확히 알려 주자!',
+    '드디어 황금성이야! 마지막 보스 문제까지 풀면 보물이 기다려!',
+  ];
+
+  static String islandIntro(QuizLevel level) => islandIntros[level.index];
+
   static String arrivedAt(String islandName) => '$islandName에 도착했어!';
 
   static String exploreFirst(String islandName) => '$islandName부터 탐험해 줘!';

@@ -78,6 +78,7 @@ flutter:
     - assets/images/mascot/
     - assets/images/clocks/
     - assets/images/frames/
+    - assets/images/islands/
     - assets/voice/
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg

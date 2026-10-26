@@ -9,6 +9,7 @@ import '../widgets/glass_container.dart';
 import '../widgets/mesh_background.dart';
 import '../widgets/analog_clock.dart';
 import '../models/clock_time.dart';
+import '../models/quiz_level.dart';
 import '../models/clock_theme.dart';
 import '../services/theme_service.dart';
 import '../services/reward_service.dart';
@@ -42,10 +43,11 @@ class _TimeSnapScreenState extends State<TimeSnapScreen>
     super.initState();
     _loadTheme();
 
-    // 빙글빙글 고속 회전 애니메이션 컨트롤러 (약 2.5초에 1바퀴=12시간)
+    // 빙글빙글 회전 (긴 바늘 한 바퀴 = 3초, 12시간 = 36초)
+    // 예전에는 2.5초에 12시간이 돌아 아이들이 맞추기 너무 어려웠다
     _spinController = AnimationController(
       vsync: this,
-      duration: Duration(milliseconds: 2500),
+      duration: Duration(seconds: 36),
     );
 
     _spinAnimation =
@@ -128,33 +130,33 @@ class _TimeSnapScreenState extends State<TimeSnapScreen>
     if (diff > 360) diff = 720 - diff;
 
     // 판정 로직
-    if (diff <= 5) {
-      // Perfect: 오차 5분 이내 (거의 정확함)
-      _judgmentText = 'PERFECT!!';
+    if (diff <= 10) {
+      // 오차 10분 이내 (약 0.5초 차이)
+      _judgmentText = '딱 맞았어!';
       _judgmentColor = Colors.amber;
       TtsService.speak(VoiceLines.snapPerfect);
       HapticHelper.heavyImpact();
       _combo++;
       _score += 50 + (_combo * 10);
       _awardStars(3);
-    } else if (diff <= 15) {
-      // Great: 오차 15분 이내
-      _judgmentText = 'GREAT!';
+    } else if (diff <= 20) {
+      // 오차 20분 이내
+      _judgmentText = '아주 가까워!';
       _judgmentColor = AppColors.success;
       HapticHelper.mediumImpact();
       _combo++;
       _score += 30;
       _awardStars(1);
-    } else if (diff <= 30) {
-      // Good: 오차 30분 이내
-      _judgmentText = 'GOOD';
+    } else if (diff <= 40) {
+      // 오차 40분 이내
+      _judgmentText = '조금 아쉬워!';
       _judgmentColor = AppColors.minuteBlue;
       HapticHelper.lightImpact();
       _combo = 0; // 콤보 끊김
       _score += 10;
     } else {
-      // Miss: 오차 30분 초과
-      _judgmentText = 'MISS...';
+      // 오차 40분 초과
+      _judgmentText = '다시 해 보자!';
       _judgmentColor = AppColors.hourRed;
       HapticHelper.vibrate();
       _combo = 0;
@@ -270,42 +272,74 @@ class _TimeSnapScreenState extends State<TimeSnapScreen>
 
               Expanded(flex: 1, child: SizedBox()),
 
-              // 판정 텍스트 (시계 위/배경 아래 겹치게)
-              SizedBox(
-                height: 50,
-                child: AnimatedOpacity(
-                  opacity: _isResult || _judgmentText == '준비...' ? 1.0 : 0.0,
-                  duration: Duration(milliseconds: 200),
-                  child: Text(
-                    _judgmentText,
-                    style: TextStyle(
-                      fontSize: 40,
-                      fontWeight: FontWeight.w900,
-                      color: _judgmentColor,
-                      fontStyle: FontStyle.italic,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black26,
-                          offset: Offset(2, 2),
-                          blurRadius: 4,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              // 회전하는 시계 위젯 (수동 모드로 Animated 시간 강제 주입)
+              // 회전하는 시계 + 멈추면 시계 위에 판정 표시
               Center(
                 child: SizedBox(
                   width: clockSize,
                   height: clockSize,
-                  child: AnalogClock(
-                    initialTime: _currentTime,
-                    interactive: false, // 손으로 못 움직이게
-                    showGuideline: true,
-                    showMinuteNumbers: true,
-                    theme: _selectedTheme,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    alignment: Alignment.center,
+                    children: [
+                      AnalogClock(
+                        initialTime: _currentTime,
+                        interactive: false, // 손으로 못 움직이게
+                        showGuideline: true,
+                        showMinuteNumbers: true,
+                        theme: _selectedTheme,
+                      ),
+                      IgnorePointer(
+                        child: AnimatedOpacity(
+                          opacity: _isResult || _judgmentText == '준비...'
+                              ? 1.0
+                              : 0.0,
+                          duration: Duration(milliseconds: 200),
+                          child: Container(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 10,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppColors.mapSand,
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: _judgmentColor,
+                                width: 4,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.25),
+                                  blurRadius: 12,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  _judgmentText,
+                                  style: TextStyle(
+                                    fontSize: 30,
+                                    fontWeight: FontWeight.w900,
+                                    color: _judgmentColor,
+                                  ),
+                                ),
+                                if (_isResult)
+                                  Text(
+                                    '멈춘 시각 ${clockTimeText(_currentTime)}',
+                                    style: TextStyle(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w800,
+                                      color: AppColors.woodDark,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

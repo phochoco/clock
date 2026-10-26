@@ -5,6 +5,7 @@ import '../utils/korean_text.dart';
 import '../utils/colors.dart';
 import '../widgets/island_ui.dart';
 import '../widgets/glass_container.dart';
+import '../widgets/treasure_map.dart';
 import '../widgets/mesh_background.dart';
 import 'quiz_screen.dart';
 import 'time_attack_screen.dart';
@@ -37,20 +38,26 @@ class GameModeScreen extends StatelessWidget {
               SizedBox(height: 16),
 
               // 퀴즈 도전 (지도에서 다음 차례인 섬)
-              _buildModeCard(
-                context,
-                icon: Icons.quiz_rounded,
-                title: '섬 퀴즈',
-                description: '지도의 다음 섬 문제를 풀고 별을 모아요!',
-                color: AppColors.minuteBlue,
-                onTap: () async {
-                  final completed = await RewardService.getCompletedLevels();
-                  if (!context.mounted) return;
-                  Navigator.push(
+              // 지도에서 다음 차례인 섬 (이름을 보여 줘서 어디로 가는지 알 수 있게)
+              FutureBuilder<List<int>>(
+                future: RewardService.getCompletedLevels(),
+                builder: (context, snapshot) {
+                  final completed = (snapshot.data ?? []).toSet();
+                  final allDone = completed.length >= QuizLevel.values.length;
+                  final level = nextLevelToPlay(completed);
+                  final island = TreasureIsland.of(level);
+                  return _buildModeCard(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => QuizScreen(
-                        initialLevel: nextLevelToPlay(completed.toSet()),
+                    icon: Icons.quiz_rounded,
+                    title: '섬 퀴즈',
+                    description: allDone
+                        ? '모든 섬을 탐험했어요! 황금성에서 다시 연습해요.'
+                        : '다음 차례: ${level.number}번 ${island.name}',
+                    color: AppColors.minuteBlue,
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => QuizScreen(initialLevel: level),
                       ),
                     ),
                   );

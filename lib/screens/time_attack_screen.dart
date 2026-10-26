@@ -128,24 +128,10 @@ class _TimeAttackScreenState extends State<TimeAttackScreen> {
   void _onCorrectAnswer() {
     HapticHelper.heavyImpact();
 
+    // 시간은 60초로 고정 (정답마다 시간이 늘어 끝나지 않던 문제)
     setState(() {
       _score++;
       _combo++;
-
-      // 기본 보너스 시간
-      _timeLeft += 5;
-
-      // 연속 정답 보너스
-      if (_combo == 3) {
-        _timeLeft += 2;
-      } else if (_combo == 5) {
-        _timeLeft += 3;
-      } else if (_combo == 10) {
-        _timeLeft += 5;
-      }
-
-      // 최대 시간 제한 (120초)
-      if (_timeLeft > 120) _timeLeft = 120;
     });
 
     // 다음 문제
@@ -174,8 +160,8 @@ class _TimeAttackScreenState extends State<TimeAttackScreen> {
     // 최고 기록 저장
     await TimeAttackService.saveHighScore(_score);
 
-    // 별 보상 (10문제당 1개)
-    final stars = _score ~/ 10;
+    // 별 보상 (2문제당 1개)
+    final stars = _starsForScore(_score);
     if (stars > 0) {
       await RewardService.addStars(stars);
     }
@@ -184,69 +170,67 @@ class _TimeAttackScreenState extends State<TimeAttackScreen> {
     _showGameOverDialog();
   }
 
+  /// 맞힌 문제 2개마다 별 1개
+  static int _starsForScore(int score) => score ~/ 2;
+
   void _showGameOverDialog() {
-    final stars = _score ~/ 10;
+    final stars = _starsForScore(_score);
     final isNewRecord = _score > _highScore;
 
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: Text(
-          isNewRecord ? '🎉 신기록!' : '⏰ 시간 종료!',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textDark,
-          ),
-          textAlign: TextAlign.center,
+      builder: (dialogContext) => IslandDialog(
+        top: Jjakkagi(
+          pose: stars > 0 ? MascotPose.cheer : MascotPose.think,
+          height: 110,
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              '점수: $_score',
-              style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
-            ),
-            if (isNewRecord)
+        title: isNewRecord ? '신기록이야!' : '시간 끝!',
+        message: isNewRecord && _highScore > 0
+            ? '60초 동안 $_score문제를 맞췄어요! (이전 기록 $_highScore문제)'
+            : '60초 동안 $_score문제를 맞췄어요!',
+        body: Container(
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: stars > 0 ? AppColors.mapGlow : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: AppColors.mapStar, width: 2),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.star_rounded,
+                color: AppColors.treasureOrangeDeep,
+                size: 24,
+              ),
+              SizedBox(width: 6),
               Text(
-                '이전 기록: $_highScore',
-                style: TextStyle(fontSize: 16, color: AppColors.textLight),
-              ),
-            SizedBox(height: 16),
-            if (stars > 0)
-              Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.warning.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  '⭐ +$stars 별 획득!',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
-                  ),
+                stars > 0 ? '별 $stars개를 받았어요!' : '2문제를 맞히면 별을 받아요!',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                  color: AppColors.woodDark,
                 ),
               ),
-          ],
+            ],
+          ),
         ),
         actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context); // 다이얼로그 닫기
-              Navigator.pop(context); // 화면 닫기
-            },
-            child: Text('홈으로'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
+          ChunkyButton(
+            label: '다시 도전',
+            icon: Icons.refresh_rounded,
+            onTap: () {
+              Navigator.pop(dialogContext);
               _restartGame();
             },
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.hourRed),
-            child: Text('다시 도전', style: TextStyle(color: Colors.white)),
+          ),
+          SandChunkyButton(
+            label: '놀이 모드로',
+            onTap: () {
+              Navigator.pop(dialogContext); // 다이얼로그 닫기
+              Navigator.pop(context); // 화면 닫기
+            },
           ),
         ],
       ),

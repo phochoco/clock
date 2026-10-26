@@ -274,10 +274,11 @@ class AnalogClockState extends State<AnalogClock>
   /// 시계 일러스트 테두리 + 새로 그린 시계판·바늘
   ///
   /// 그림 속 시계판 중심을 위젯 중심(바늘을 돌리는 기준점)에 맞춘다.
-  /// 시계판은 위젯의 약 38% 반지름으로 맞추되, 장식이 큰 그림은 너무 커지지 않게 줄인다.
   Widget _buildIllustrated(ClockFaceArt art, Size size) {
     final side = min(size.width, size.height);
-    final artSize = min(side * 1.25, side * 0.4 / art.r);
+    // 시계판은 위젯 반지름의 약 80%로 키우되, 장식이 위젯 밖으로
+    // 크게 넘쳐 위아래 글자를 가리지 않게 한다 (최대 8%까지만 넘침)
+    final artSize = min(side * 0.4 / art.r, side * 0.58 / art.reach);
     final faceRadius = art.r * artSize;
     final center = Offset(size.width / 2, size.height / 2);
     final themeId = widget.theme?.id ?? 'basic_clock';

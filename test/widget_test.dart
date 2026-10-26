@@ -48,27 +48,20 @@ void main() {
     expect(_plainTextContaining('Google AdMob'), findsNothing);
   });
 
-  testWidgets(
-    'Quiz island tabs stay locked until earlier islands are cleared',
-    (WidgetTester tester) async {
-      SharedPreferences.setMockInitialValues({'completed_levels': '[1]'});
-      await tester.pumpWidget(
-        const MaterialApp(home: QuizScreen(initialLevel: QuizLevel.level2)),
-      );
-      await tester.pump();
+  testWidgets('Quiz shows the island story and question steps', (
+    WidgetTester tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({'completed_levels': '[1]'});
+    await tester.pumpWidget(
+      const MaterialApp(home: QuizScreen(initialLevel: QuizLevel.level2)),
+    );
+    await tester.pump();
 
-      expect(find.bySemanticsLabel('1번 야자수 해변 완료'), findsOneWidget);
-      expect(find.bySemanticsLabel('2번 버섯 숲 열림'), findsOneWidget);
-      expect(find.bySemanticsLabel('3번 화산섬 잠김'), findsOneWidget);
-
-      await tester.tap(find.bySemanticsLabel('3번 화산섬 잠김'));
-      await tester.pump();
-
-      expect(find.text('2번 버섯 숲'), findsOneWidget);
-      expect(_plainTextContaining('버섯 숲부터 탐험해 줘!'), findsOneWidget);
-      await tester.pump(const Duration(seconds: 1));
-    },
-  );
+    expect(find.text('2번 버섯 숲'), findsOneWidget);
+    expect(find.bySemanticsLabel('5문제 중 1번째 문제'), findsOneWidget);
+    expect(_plainTextContaining('버섯 숲 요정들이'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 1));
+  });
 }
 
 /// 낱말 줄바꿈용 결합자(U+2060)를 뺀 글자로 찾기

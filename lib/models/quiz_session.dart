@@ -29,6 +29,12 @@ class QuizSession {
   bool showCombo = false;
   int lastEarnedStars = 0;
 
+  /// 지금 문제의 방식 (문제를 낼 때 정해서 정답을 맞혀도 바뀌지 않는다)
+  QuizTask currentTask = QuizTask.setHands;
+
+  /// 황금성 마지막 보스 문제인지
+  bool isBoss = false;
+
   void start({QuizLevel level = QuizLevel.level1}) {
     currentLevel = level;
     _resetProgress();
@@ -53,8 +59,23 @@ class QuizSession {
     }
 
     final correctTime = ClockTime(hour: question.hour, minute: question.minute);
-    final correct = ClockAnswerValidator.isCorrect(time, correctTime);
+    return _record(ClockAnswerValidator.isCorrect(time, correctTime));
+  }
 
+  /// 시계 읽기 문제: 고른 보기가 정확히 같은 시각인지 (1분 차이 보기도 있어서 오차 없이)
+  QuizAnswerResult answerChoice(ClockTime choice) {
+    userAnswer = choice;
+    final question = currentQuestion;
+    if (question == null) {
+      return const QuizAnswerResult(isCorrect: false, earnedStars: 0);
+    }
+    return _record(
+      choice.hour % 12 == question.hour % 12 &&
+          choice.minute == question.minute,
+    );
+  }
+
+  QuizAnswerResult _record(bool correct) {
     showResult = true;
     isCorrect = correct;
     lastEarnedStars = 0;
@@ -85,7 +106,11 @@ class QuizSession {
     lastEarnedStars = 0;
   }
 
+  /// 이번 섬에서 이미 낸 시각 (같은 문제가 두 번 나오지 않게)
+  final Set<int> _askedTimes = {};
+
   void _resetProgress() {
+    _askedTimes.clear();
     userAnswer = null;
     showResult = false;
     isCorrect = false;
@@ -98,10 +123,20 @@ class QuizSession {
   }
 
   void _generateQuestion() {
+    // 맞힌 문제 수 = 지금 몇 번째 문제인지
+    currentTask = quizTaskFor(currentLevel, score);
+    isBoss = isBossQuestion(currentLevel, score, questionsPerLevel);
     currentQuestion = _questionGenerator.next(
       currentLevel,
       previous: currentQuestion,
+      avoid: {
+        ..._askedTimes,
+        // 바늘을 돌리는 문제는 시계가 12시에서 시작하므로 12시 정각은 내지 않는다
+        if (currentTask != QuizTask.readClock) 0,
+      },
     );
+    final q = currentQuestion!;
+    _askedTimes.add((q.hour % 12) * 60 + q.minute);
     userAnswer = null;
     showResult = false;
     isCorrect = false;

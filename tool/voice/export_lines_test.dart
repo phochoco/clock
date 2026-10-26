@@ -63,6 +63,14 @@ void main() {
     }
 
     lines.add(VoiceLines.quizIdle);
+    lines.addAll([
+      VoiceLines.readPrompt,
+      VoiceLines.readHint,
+      VoiceLines.digitalPrompt,
+      VoiceLines.bossIntro,
+      VoiceLines.bossCleared,
+      ...VoiceLines.islandIntros,
+    ]);
     lines.add(VoiceLines.allIslandsComplete);
     for (final name in islands) {
       lines.add(VoiceLines.arrivedAt(name));

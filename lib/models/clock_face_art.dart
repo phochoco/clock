@@ -9,6 +9,7 @@ class ClockFaceArt {
     required this.cx,
     required this.cy,
     required this.r,
+    required this.reach,
     required this.faceColor,
     required this.dark,
   });
@@ -19,6 +20,9 @@ class ClockFaceArt {
 
   /// 시계판 반지름 (그림 너비에 대한 비율)
   final double r;
+
+  /// 시계판 중심에서 그림 끝(깃발, 공룡 머리 등)까지 가장 먼 거리 (그림 너비에 대한 비율)
+  final double reach;
 
   /// 시계판 바탕색
   final Color faceColor;
@@ -36,6 +40,7 @@ class ClockFaceArt {
       cx: 0.4996,
       cy: 0.4961,
       r: 0.3629,
+      reach: 0.497,
       faceColor: Color(0xFFFCF1DC),
       dark: false,
     ),
@@ -43,6 +48,7 @@ class ClockFaceArt {
       cx: 0.4999,
       cy: 0.5106,
       r: 0.2798,
+      reach: 0.497,
       faceColor: Color(0xFFFCF1DB),
       dark: false,
     ),
@@ -50,6 +56,7 @@ class ClockFaceArt {
       cx: 0.4994,
       cy: 0.5389,
       r: 0.378,
+      reach: 0.534,
       faceColor: Color(0xFF1C347B),
       dark: true,
     ),
@@ -57,6 +64,7 @@ class ClockFaceArt {
       cx: 0.5001,
       cy: 0.5007,
       r: 0.3006,
+      reach: 0.497,
       faceColor: Color(0xFFFDF2DE),
       dark: false,
     ),
@@ -64,6 +72,7 @@ class ClockFaceArt {
       cx: 0.4998,
       cy: 0.497,
       r: 0.3353,
+      reach: 0.497,
       faceColor: Color(0xFFFCECD2),
       dark: false,
     ),
@@ -71,6 +80,7 @@ class ClockFaceArt {
       cx: 0.5001,
       cy: 0.5043,
       r: 0.3235,
+      reach: 0.497,
       faceColor: Color(0xFFFCECD4),
       dark: false,
     ),
@@ -78,6 +88,7 @@ class ClockFaceArt {
       cx: 0.4996,
       cy: 0.4972,
       r: 0.3272,
+      reach: 0.497,
       faceColor: Color(0xFFFDF2DF),
       dark: false,
     ),
@@ -85,6 +96,7 @@ class ClockFaceArt {
       cx: 0.5452,
       cy: 0.4921,
       r: 0.3336,
+      reach: 0.542,
       faceColor: Color(0xFF41256E),
       dark: true,
     ),
@@ -92,6 +104,7 @@ class ClockFaceArt {
       cx: 0.4993,
       cy: 0.4937,
       r: 0.3292,
+      reach: 0.498,
       faceColor: Color(0xFFDCE7FB),
       dark: false,
     ),
@@ -99,6 +112,7 @@ class ClockFaceArt {
       cx: 0.4987,
       cy: 0.6168,
       r: 0.306,
+      reach: 0.614,
       faceColor: Color(0xFFFCEBD1),
       dark: false,
     ),
@@ -106,6 +120,7 @@ class ClockFaceArt {
       cx: 0.4996,
       cy: 0.5515,
       r: 0.3391,
+      reach: 0.548,
       faceColor: Color(0xFFFCDFE1),
       dark: false,
     ),
@@ -113,6 +128,7 @@ class ClockFaceArt {
       cx: 0.4996,
       cy: 0.5444,
       r: 0.3499,
+      reach: 0.541,
       faceColor: Color(0xFFFDF1DC),
       dark: false,
     ),
@@ -120,6 +136,7 @@ class ClockFaceArt {
       cx: 0.4647,
       cy: 0.6065,
       r: 0.29,
+      reach: 0.603,
       faceColor: Color(0xFFFCEDD2),
       dark: false,
     ),
@@ -127,6 +144,7 @@ class ClockFaceArt {
       cx: 0.4997,
       cy: 0.525,
       r: 0.2972,
+      reach: 0.511,
       faceColor: Color(0xFFFCEDD3),
       dark: false,
     ),
@@ -134,6 +152,7 @@ class ClockFaceArt {
       cx: 0.4986,
       cy: 0.4915,
       r: 0.3105,
+      reach: 0.498,
       faceColor: Color(0xFFFCEDD5),
       dark: false,
     ),

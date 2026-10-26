@@ -1,3 +1,4 @@
+import 'clock_time.dart';
 import 'dart:math';
 
 typedef RandomInt = int Function(int max);
@@ -74,6 +75,121 @@ extension QuizLevelExtension on QuizLevel {
   }
 }
 
+/// 문제 방식
+enum QuizTask {
+  /// 글로 된 시각을 보고 바늘 맞추기
+  setHands,
+
+  /// 시계를 보고 맞는 시각 고르기
+  readClock,
+
+  /// 디지털 시계를 보고 바늘 맞추기
+  digitalSet,
+}
+
+/// 섬(레벨)마다 5문제의 방식 순서. 뒤 섬으로 갈수록 새로운 방식이 섞인다.
+const Map<QuizLevel, List<QuizTask>> quizTaskPlan = {
+  QuizLevel.level1: [
+    QuizTask.setHands,
+    QuizTask.setHands,
+    QuizTask.setHands,
+    QuizTask.setHands,
+    QuizTask.setHands,
+  ],
+  QuizLevel.level2: [
+    QuizTask.setHands,
+    QuizTask.readClock,
+    QuizTask.setHands,
+    QuizTask.readClock,
+    QuizTask.setHands,
+  ],
+  QuizLevel.level3: [
+    QuizTask.setHands,
+    QuizTask.readClock,
+    QuizTask.digitalSet,
+    QuizTask.readClock,
+    QuizTask.digitalSet,
+  ],
+  QuizLevel.level4: [
+    QuizTask.digitalSet,
+    QuizTask.readClock,
+    QuizTask.setHands,
+    QuizTask.readClock,
+    QuizTask.digitalSet,
+  ],
+  QuizLevel.level5: [
+    QuizTask.readClock,
+    QuizTask.digitalSet,
+    QuizTask.setHands,
+    QuizTask.readClock,
+    QuizTask.digitalSet,
+  ],
+};
+
+/// n번째 문제(0부터)의 방식
+QuizTask quizTaskFor(QuizLevel level, int index) {
+  final plan = quizTaskPlan[level]!;
+  return plan[index.clamp(0, plan.length - 1)];
+}
+
+/// 황금성(마지막 섬)의 마지막 문제는 보스 문제
+bool isBossQuestion(QuizLevel level, int index, int questionsPerLevel) =>
+    level == QuizLevel.level5 && index == questionsPerLevel - 1;
+
+/// 시계 읽기 문제의 보기 3개 (정답 1 + 아이들이 자주 헷갈리는 시각 2)
+List<ClockTime> readClockOptions(QuizQuestion question, RandomInt randomInt) {
+  final h = question.hour;
+  final m = question.minute;
+  ClockTime at(int hour, int minute) =>
+      ClockTime(hour: (hour % 12 + 12) % 12, minute: (minute % 60 + 60) % 60);
+
+  final candidates = switch (question.level) {
+    QuizLevel.level1 => [at(h + 1, 0), at(h - 1, 0), at(h + 6, 0)],
+    QuizLevel.level2 => [at(h, m + 30), at(h + 1, m), at(h - 1, m)],
+    QuizLevel.level3 => [
+      at(h, m + 5),
+      at(h, m - 5),
+      at(h, m + 10),
+      at(h + 1, m),
+    ],
+    QuizLevel.level4 || QuizLevel.level5 => [
+      at(h, m + 1),
+      at(h, m - 1),
+      at(h, m + 5),
+      at(h + 1, m),
+    ],
+  };
+  final correct = at(h, m);
+  final pool = <ClockTime>[];
+  for (final c in candidates) {
+    final duplicate = pool.any((p) => p.hour == c.hour && p.minute == c.minute);
+    final isCorrect = c.hour == correct.hour && c.minute == correct.minute;
+    if (!duplicate && !isCorrect) pool.add(c);
+  }
+  final options = <ClockTime>[correct];
+  while (options.length < 3 && pool.isNotEmpty) {
+    options.add(pool.removeAt(randomInt(pool.length)));
+  }
+  // 정답 위치를 섞는다
+  final answerSlot = randomInt(options.length);
+  options
+    ..removeAt(0)
+    ..insert(answerSlot, correct);
+  return options;
+}
+
+/// 시각을 "7시 30분" 꼴로
+String clockTimeText(ClockTime time) {
+  final h = time.hour % 12 == 0 ? 12 : time.hour % 12;
+  return time.minute == 0 ? '$h시' : '$h시 ${time.minute}분';
+}
+
+/// 디지털 시계 표기 "07:30"
+String digitalTimeText(int hour, int minute) {
+  final h = hour % 12 == 0 ? 12 : hour % 12;
+  return '${h.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
+}
+
 /// 퀴즈 문제
 class QuizQuestion {
   final int hour;
@@ -107,16 +223,23 @@ class QuizQuestionGenerator {
 
   final RandomInt _randomInt;
 
-  QuizQuestion next(QuizLevel level, {QuizQuestion? previous}) {
+  /// [avoid]: 이미 낸 시각 등 피할 시각 (시×60+분, 12시는 0)
+  QuizQuestion next(
+    QuizLevel level, {
+    QuizQuestion? previous,
+    Set<int> avoid = const {},
+  }) {
     QuizQuestion question;
     var attempts = 0;
+
+    bool rejected(QuizQuestion q) =>
+        (previous != null && q.isSameTime(previous)) ||
+        avoid.contains((q.hour % 12) * 60 + q.minute);
 
     do {
       question = _build(level);
       attempts++;
-    } while (previous != null &&
-        question.isSameTime(previous) &&
-        attempts < 12);
+    } while (rejected(question) && attempts < 40);
 
     return question;
   }

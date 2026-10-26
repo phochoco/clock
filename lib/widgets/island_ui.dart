@@ -6,25 +6,38 @@ import '../utils/colors.dart';
 
 /// 바다 배경 (이미지가 없으면 바다색 그라데이션)
 class IslandSeaBackground extends StatelessWidget {
-  const IslandSeaBackground({super.key, required this.child});
+  const IslandSeaBackground({
+    super.key,
+    required this.child,
+    this.asset = 'assets/images/map/sea_bg.jpg',
+  });
 
   final Widget child;
+
+  /// 배경 그림 (기본은 보물섬 바다, 퀴즈에서는 섬마다 다름)
+  final String asset;
 
   @override
   Widget build(BuildContext context) {
     return Stack(
       children: [
         Positioned.fill(
-          child: Image.asset(
-            'assets/images/map/sea_bg.jpg',
-            fit: BoxFit.cover,
-            alignment: Alignment.topCenter,
-            errorBuilder: (_, _, _) => DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [AppColors.mapSea, AppColors.mapSeaDeep],
+          child: AnimatedSwitcher(
+            duration: Duration(milliseconds: 500),
+            layoutBuilder: (current, previous) =>
+                Stack(fit: StackFit.expand, children: [...previous, ?current]),
+            child: Image.asset(
+              asset,
+              key: ValueKey(asset),
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
+              errorBuilder: (_, _, _) => DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [AppColors.mapSea, AppColors.mapSeaDeep],
+                  ),
                 ),
               ),
             ),
