@@ -5,6 +5,7 @@ import '../models/quiz_level.dart';
 import '../models/clock_theme.dart';
 import '../widgets/analog_clock.dart';
 import '../utils/colors.dart';
+import '../widgets/island_ui.dart';
 import '../utils/clock_answer_validator.dart';
 import '../utils/haptic.dart';
 import '../services/daily_challenge_service.dart';
@@ -252,21 +253,9 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: AppColors.mapSea,
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: Text(
-          '데일리 챌린지',
-          style: TextStyle(
-            color: AppColors.textDark,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        iconTheme: IconThemeData(color: AppColors.textDark),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-      ),
+      appBar: islandAppBar('데일리 챌린지'),
       body: _theme == null
           ? Center(child: CircularProgressIndicator())
           : MeshBackground(
@@ -437,27 +426,10 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
   }
 
   Widget _buildCheckButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: _userAnswer == null ? null : _checkAnswer,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.hourRed,
-          disabledBackgroundColor: AppColors.borderLight,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-        child: Text(
-          '정답 확인',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-      ),
+    return ChunkyButton(
+      label: '정답 확인',
+      icon: Icons.check_rounded,
+      onTap: _userAnswer == null ? null : _checkAnswer,
     );
   }
 }

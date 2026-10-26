@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/colors.dart';
+import '../widgets/island_ui.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/mesh_background.dart';
 import '../widgets/analog_clock.dart';
@@ -205,23 +206,9 @@ class _StoryModeScreenState extends State<StoryModeScreen> {
         .toDouble();
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: AppColors.mapSea,
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: Text(
-          '시계 마을 대모험',
-          style: TextStyle(
-            color: AppColors.textDark,
-            fontWeight: FontWeight.w800,
-            fontSize: 24,
-            letterSpacing: 0,
-          ),
-        ),
-        iconTheme: IconThemeData(color: AppColors.textDark),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-      ),
+      appBar: islandAppBar('시계 마을 대모험'),
       body: MeshBackground(
         child: SafeArea(
           child: Column(
@@ -328,30 +315,10 @@ class _StoryModeScreenState extends State<StoryModeScreen> {
                 padding: EdgeInsets.all(24),
                 child: _showResult
                     ? _buildResultCard()
-                    : SizedBox(
-                        width: double.infinity,
-                        height: 60,
-                        child: ElevatedButton(
-                          onPressed: _userAnswer == null ? null : _checkAnswer,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.minuteBlue,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            elevation: 8,
-                            shadowColor: AppColors.minuteBlue.withValues(
-                              alpha: 0.5,
-                            ),
-                          ),
-                          child: Text(
-                            '확인하기',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
+                    : ChunkyButton(
+                        label: '확인하기',
+                        icon: Icons.check_rounded,
+                        onTap: _userAnswer == null ? null : _checkAnswer,
                       ),
               ),
             ],

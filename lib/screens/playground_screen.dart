@@ -5,6 +5,7 @@ import '../services/theme_service.dart';
 import '../utils/colors.dart';
 import '../widgets/analog_clock.dart';
 import '../widgets/glass_container.dart';
+import '../widgets/island_ui.dart';
 import '../widgets/mesh_background.dart';
 
 /// 학습 모드 (Playground) 화면
@@ -44,7 +45,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
         .toDouble();
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: AppColors.mapSea,
       body: MeshBackground(
         child: SafeArea(
           child: Column(
@@ -99,76 +100,53 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
   }
 
   Widget _buildTopBar() {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          // 뒤로가기 버튼
-          IconButton(
-            icon: Icon(Icons.arrow_back_rounded, size: 28),
-            color: AppColors.textDark,
-            onPressed: () => Navigator.pop(context),
-          ),
-
-          Expanded(
-            child: Text(
-              '시계 배우기',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w800,
-                color: AppColors.textDark,
-              ),
+    return IslandTopBar(
+      title: '바늘 연습',
+      trailing: PopupMenuButton<String>(
+        tooltip: '보기 설정',
+        style: IconButton.styleFrom(
+          backgroundColor: Colors.white.withValues(alpha: 0.85),
+        ),
+        icon: Icon(Icons.tune_rounded, size: 22, color: AppColors.woodDark),
+        onSelected: (value) {
+          setState(() {
+            if (value == 'digital') {
+              _showDigital = !_showDigital;
+            } else if (value == 'minutes') {
+              _showMinuteNumbers = !_showMinuteNumbers;
+            }
+          });
+        },
+        itemBuilder: (context) => [
+          PopupMenuItem(
+            value: 'digital',
+            child: Row(
+              children: [
+                Icon(
+                  _showDigital
+                      ? Icons.check_box
+                      : Icons.check_box_outline_blank,
+                  color: AppColors.appleBlue,
+                ),
+                SizedBox(width: 8),
+                Text('디지털 시계 표시'),
+              ],
             ),
           ),
-
-          PopupMenuButton<String>(
-            icon: Icon(
-              Icons.more_horiz_rounded,
-              size: 28,
-              color: AppColors.textDark,
+          PopupMenuItem(
+            value: 'minutes',
+            child: Row(
+              children: [
+                Icon(
+                  _showMinuteNumbers
+                      ? Icons.check_box
+                      : Icons.check_box_outline_blank,
+                  color: AppColors.appleBlue,
+                ),
+                SizedBox(width: 8),
+                Text('분 숫자 표시'),
+              ],
             ),
-            onSelected: (value) {
-              setState(() {
-                if (value == 'digital') {
-                  _showDigital = !_showDigital;
-                } else if (value == 'minutes') {
-                  _showMinuteNumbers = !_showMinuteNumbers;
-                }
-              });
-            },
-            itemBuilder: (context) => [
-              PopupMenuItem(
-                value: 'digital',
-                child: Row(
-                  children: [
-                    Icon(
-                      _showDigital
-                          ? Icons.check_box
-                          : Icons.check_box_outline_blank,
-                      color: AppColors.appleBlue,
-                    ),
-                    SizedBox(width: 8),
-                    Text('디지털 시계 표시'),
-                  ],
-                ),
-              ),
-              PopupMenuItem(
-                value: 'minutes',
-                child: Row(
-                  children: [
-                    Icon(
-                      _showMinuteNumbers
-                          ? Icons.check_box
-                          : Icons.check_box_outline_blank,
-                      color: AppColors.appleBlue,
-                    ),
-                    SizedBox(width: 8),
-                    Text('분 숫자 표시'),
-                  ],
-                ),
-              ),
-            ],
           ),
         ],
       ),
@@ -272,12 +250,13 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
                   duration: Duration(milliseconds: 160),
                   height: 42,
                   decoration: BoxDecoration(
-                    color: selected ? AppColors.appleBlue : Colors.white,
+                    color: selected
+                        ? AppColors.treasureOrange
+                        : AppColors.mapSand,
                     borderRadius: BorderRadius.circular(21),
                     border: Border.all(
-                      color: selected
-                          ? AppColors.appleBlue
-                          : AppColors.borderLight,
+                      color: selected ? Colors.white : AppColors.woodLight,
+                      width: 2,
                     ),
                     boxShadow: [
                       BoxShadow(
@@ -293,7 +272,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w800,
-                      color: selected ? Colors.white : AppColors.textDark,
+                      color: selected ? Colors.white : AppColors.woodDark,
                     ),
                   ),
                 ),
@@ -323,70 +302,77 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
 
   Widget _buildHelpText() {
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 24),
-      child: GlassContainer(
-        padding: EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        borderRadius: 24,
-        opacity: 0.78,
-        blurRadius: 18,
-        child: Column(
-          children: [
-            Text(
-              '바늘을 손가락으로 돌려 보세요',
-              style: TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w900,
-                color: AppColors.textDark,
+      padding: EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Jjakkagi(pose: MascotPose.point, height: 80),
+          Expanded(
+            child: GlassContainer(
+              padding: EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+              borderRadius: 24,
+              opacity: 0.78,
+              blurRadius: 18,
+              child: Column(
+                children: [
+                  Text(
+                    '바늘을 손가락으로 돌려 보세요',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      color: AppColors.textDark,
+                    ),
+                  ),
+                  SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: AppColors.appleRed,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        '짧은 바늘 = 시간',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.appleRed,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 60,
+                        height: 3,
+                        decoration: BoxDecoration(
+                          color: AppColors.appleBlue,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                      SizedBox(width: 8),
+                      Text(
+                        '긴 바늘 = 분',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.appleBlue,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
-            SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.appleRed,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                SizedBox(width: 8),
-                Text(
-                  '짧은 바늘 = 시간',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.appleRed,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  width: 60,
-                  height: 3,
-                  decoration: BoxDecoration(
-                    color: AppColors.appleBlue,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                SizedBox(width: 8),
-                Text(
-                  '긴 바늘 = 분',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
-                    color: AppColors.appleBlue,
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -480,7 +466,7 @@ class _PlaygroundScreenState extends State<PlaygroundScreen> {
             vertical: 12,
           ),
           decoration: BoxDecoration(
-            color: isPrimary ? AppColors.appleBlue : Colors.transparent,
+            color: isPrimary ? AppColors.treasureOrange : Colors.transparent,
             borderRadius: BorderRadius.circular(25),
           ),
           alignment: Alignment.center,

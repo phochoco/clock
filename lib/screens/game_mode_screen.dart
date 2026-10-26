@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import '../models/quiz_level.dart';
+import '../services/reward_service.dart';
 import '../utils/colors.dart';
+import '../widgets/island_ui.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/mesh_background.dart';
 import 'quiz_screen.dart';
@@ -15,40 +18,40 @@ class GameModeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: AppColors.mapSea,
       extendBodyBehindAppBar: true, // 앱바 뒤로 배경 확장
-      appBar: AppBar(
-        title: Text(
-          '게임 모드',
-          style: TextStyle(
-            color: AppColors.textDark,
-            fontWeight: FontWeight.w800,
-            fontSize: 24,
-            letterSpacing: 0,
-          ),
-        ),
-        iconTheme: IconThemeData(color: AppColors.textDark),
-        backgroundColor: Colors.transparent, // 투명 앱바
-        elevation: 0,
-        centerTitle: true,
-      ),
+      appBar: islandAppBar('놀이 모드'),
       body: MeshBackground(
         child: SafeArea(
           child: ListView(
             padding: EdgeInsets.all(24),
             physics: const BouncingScrollPhysics(),
             children: [
-              // 퀴즈 도전
+              Row(
+                children: [
+                  Jjakkagi(pose: MascotPose.wave, height: 90),
+                  Flexible(child: IslandSpeechBubble(text: '오늘은 어떤 놀이를 할까?')),
+                ],
+              ),
+              SizedBox(height: 16),
+
+              // 퀴즈 도전 (지도에서 다음 차례인 섬)
               _buildModeCard(
                 context,
                 icon: Icons.quiz_rounded,
-                title: '퀴즈 도전',
-                description: '5단계 문제를 풀고\n별을 모아요!',
+                title: '섬 퀴즈',
+                description: '지도의 다음 섬 문제를 풀고\n별을 모아요!',
                 color: AppColors.minuteBlue,
-                onTap: () {
+                onTap: () async {
+                  final completed = await RewardService.getCompletedLevels();
+                  if (!context.mounted) return;
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => QuizScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => QuizScreen(
+                        initialLevel: nextLevelToPlay(completed.toSet()),
+                      ),
+                    ),
                   );
                 },
               ),
@@ -189,25 +192,6 @@ class GameModeScreen extends StatelessWidget {
                 size: 32,
               ),
             ],
-          ),
-          // 카드 상단 장식 빛 번짐
-          Positioned(
-            top: -20,
-            right: -20,
-            child: Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                color: color.withValues(alpha: 0.1),
-                boxShadow: [
-                  BoxShadow(
-                    color: color.withValues(alpha: 0.2),
-                    blurRadius: 40,
-                  ),
-                ],
-              ),
-            ),
           ),
         ],
       ),

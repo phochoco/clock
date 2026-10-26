@@ -292,50 +292,15 @@ class _QuizScreenState extends State<QuizScreen> {
 
   Widget _buildTopBar() {
     final island = _island;
-    return Padding(
-      padding: EdgeInsets.fromLTRB(12, 8, 12, 0),
-      child: Row(
-        children: [
-          SandIconButton(
-            tooltip: '지도로 돌아가기',
-            icon: Icons.arrow_back_rounded,
-            onPressed: () => Navigator.pop(context),
-          ),
-          Expanded(
-            child: Center(
-              child: Container(
-                padding: EdgeInsets.fromLTRB(6, 4, 14, 4),
-                decoration: BoxDecoration(
-                  color: AppColors.mapSand,
-                  borderRadius: BorderRadius.circular(24),
-                  border: Border.all(color: AppColors.woodLight, width: 2),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Image.asset(
-                      island.asset,
-                      width: 36,
-                      height: 36,
-                      errorBuilder: (_, _, _) => SizedBox(width: 36),
-                    ),
-                    SizedBox(width: 6),
-                    Text(
-                      '${island.level.number}번 ${island.name}',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.w900,
-                        color: AppColors.woodDark,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          _ScoreChests(score: _session.score, total: questionsPerLevel),
-        ],
+    return IslandTopBar(
+      title: '${island.level.number}번 ${island.name}',
+      leading: Image.asset(
+        island.asset,
+        width: 36,
+        height: 36,
+        errorBuilder: (_, _, _) => SizedBox(width: 36),
       ),
+      trailing: _ScoreChests(score: _session.score, total: questionsPerLevel),
     );
   }
 

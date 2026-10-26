@@ -6,6 +6,7 @@ import '../models/quiz_level.dart';
 import '../models/clock_theme.dart';
 import '../widgets/analog_clock.dart';
 import '../utils/colors.dart';
+import '../widgets/island_ui.dart';
 import '../utils/clock_answer_validator.dart';
 import '../utils/haptic.dart';
 import '../services/time_attack_service.dart';
@@ -267,21 +268,9 @@ class _TimeAttackScreenState extends State<TimeAttackScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: AppColors.mapSea,
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: Text(
-          '타임 어택',
-          style: TextStyle(
-            color: AppColors.textDark,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        iconTheme: IconThemeData(color: AppColors.textDark),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-      ),
+      appBar: islandAppBar('타임 어택'),
       body: _theme == null
           ? Center(child: CircularProgressIndicator())
           : MeshBackground(
@@ -417,27 +406,10 @@ class _TimeAttackScreenState extends State<TimeAttackScreen> {
   }
 
   Widget _buildCheckButton() {
-    return SizedBox(
-      width: double.infinity,
-      height: 56,
-      child: ElevatedButton(
-        onPressed: _userAnswer == null ? null : _checkAnswer,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.hourRed,
-          disabledBackgroundColor: AppColors.borderLight,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-        child: Text(
-          '정답 확인',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-      ),
+    return ChunkyButton(
+      label: '정답 확인',
+      icon: Icons.check_rounded,
+      onTap: _userAnswer == null ? null : _checkAnswer,
     );
   }
 }

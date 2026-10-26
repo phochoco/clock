@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import '../utils/colors.dart';
+import '../widgets/island_ui.dart';
 import '../utils/haptic.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/mesh_background.dart';
@@ -184,23 +185,9 @@ class _TimeSnapScreenState extends State<TimeSnapScreen>
     String minStr = _targetTime.minute.toString().padLeft(2, '0');
 
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: AppColors.mapSea,
       extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        title: Text(
-          '빙글빙글 찰칵!',
-          style: TextStyle(
-            color: AppColors.textDark,
-            fontWeight: FontWeight.w800,
-            fontSize: 24,
-            letterSpacing: 0,
-          ),
-        ),
-        iconTheme: IconThemeData(color: AppColors.textDark),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        centerTitle: true,
-      ),
+      appBar: islandAppBar('빙글빙글 찰칵!'),
       body: MeshBackground(
         child: SafeArea(
           child: Column(

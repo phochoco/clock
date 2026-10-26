@@ -7,6 +7,7 @@ import '../models/clock_theme.dart';
 import '../services/reward_service.dart';
 import '../services/theme_service.dart';
 import '../widgets/glass_container.dart';
+import '../widgets/island_ui.dart';
 import '../widgets/mesh_background.dart';
 import '../widgets/analog_clock.dart';
 import '../models/clock_time.dart';
@@ -55,7 +56,7 @@ class _RewardScreenState extends State<RewardScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
+      backgroundColor: AppColors.mapSea,
       body: MeshBackground(
         child: SafeArea(
           child: _isLoading
@@ -83,25 +84,8 @@ class _RewardScreenState extends State<RewardScreen> {
 
   Widget _buildTopBar(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          IconButton(
-            icon: Icon(Icons.arrow_back, color: AppColors.textDark),
-            onPressed: () => Navigator.pop(context),
-          ),
-          Text(
-            '내 시계들',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              color: AppColors.textDark,
-            ),
-          ),
-          SizedBox(width: 48), // 뒤로가기 버튼과 균형 맞추기
-        ],
-      ),
+      padding: EdgeInsets.only(bottom: 8),
+      child: IslandTopBar(title: '내 시계들'),
     );
   }
 
@@ -616,10 +600,7 @@ class _RewardScreenState extends State<RewardScreen> {
                   decoration: BoxDecoration(
                     gradient: _selectedTabIndex == 0
                         ? LinearGradient(
-                            colors: [
-                              AppColors.textDark,
-                              AppColors.textDark.withValues(alpha: 0.86),
-                            ],
+                            colors: [AppColors.wood, AppColors.woodDark],
                           )
                         : null,
                     borderRadius: BorderRadius.circular(25),
@@ -632,7 +613,7 @@ class _RewardScreenState extends State<RewardScreen> {
                         size: 20,
                         color: _selectedTabIndex == 0
                             ? Colors.white
-                            : AppColors.textLight,
+                            : AppColors.wood,
                       ),
                       SizedBox(width: 8),
                       Text(
@@ -642,7 +623,7 @@ class _RewardScreenState extends State<RewardScreen> {
                           fontWeight: FontWeight.bold,
                           color: _selectedTabIndex == 0
                               ? Colors.white
-                              : AppColors.textLight,
+                              : AppColors.wood,
                         ),
                       ),
                     ],
@@ -659,8 +640,8 @@ class _RewardScreenState extends State<RewardScreen> {
                     gradient: _selectedTabIndex == 1
                         ? LinearGradient(
                             colors: [
-                              AppColors.appleBlue,
-                              AppColors.appleBlue.withValues(alpha: 0.7),
+                              AppColors.treasureOrange,
+                              AppColors.treasureOrangeDeep,
                             ],
                           )
                         : null,
@@ -674,7 +655,7 @@ class _RewardScreenState extends State<RewardScreen> {
                         size: 20,
                         color: _selectedTabIndex == 1
                             ? Colors.white
-                            : AppColors.textLight,
+                            : AppColors.wood,
                       ),
                       SizedBox(width: 8),
                       Text(
@@ -684,7 +665,7 @@ class _RewardScreenState extends State<RewardScreen> {
                           fontWeight: FontWeight.bold,
                           color: _selectedTabIndex == 1
                               ? Colors.white
-                              : AppColors.textLight,
+                              : AppColors.wood,
                         ),
                       ),
                     ],

@@ -1,7 +1,8 @@
-import 'dart:ui';
 import 'package:flutter/material.dart';
+import '../utils/colors.dart';
 
-/// 앱 전반에 걸쳐 사용되는 재사용 가능한 글래스모피즘(유리 질감) 컨테이너
+/// 앱 전반에 걸쳐 사용되는 카드 컨테이너
+/// 보물섬 바다 배경 위에서도 잘 읽히도록 모래색 판에 나무 테두리를 두른다
 class GlassContainer extends StatelessWidget {
   final Widget child;
   final double width;
@@ -11,8 +12,8 @@ class GlassContainer extends StatelessWidget {
   final EdgeInsetsGeometry margin;
   final VoidCallback? onTap;
   final bool isDark; // 다크 모드 표면 여부
-  final double blurRadius; // 블러 강도
-  final double opacity; // 배경 투명도
+  final double blurRadius; // (이전 글래스 스타일 호환용)
+  final double opacity; // (이전 글래스 스타일 호환용)
 
   const GlassContainer({
     super.key,
@@ -25,40 +26,28 @@ class GlassContainer extends StatelessWidget {
     this.onTap,
     this.isDark = false,
     this.blurRadius = 20.0,
-    this.opacity = 0.2, // 20% 투명도가 가장 유리스러움
+    this.opacity = 0.2,
   });
 
   @override
   Widget build(BuildContext context) {
-    // 배경 테두리와 색상
-    final Color bgColor = isDark ? const Color(0xFF11141B) : Colors.white;
-    final Color borderColor = Colors.white.withValues(
-      alpha: isDark ? 0.12 : 0.4,
-    );
-
-    Widget container = Container(
+    final container = Container(
       width: width == double.infinity ? null : width,
       height: height == double.infinity ? null : height,
       margin: margin,
+      padding: padding,
       decoration: BoxDecoration(
-        color: bgColor.withValues(alpha: opacity),
+        color: isDark ? AppColors.watchSurface : AppColors.mapSand,
         borderRadius: BorderRadius.circular(borderRadius),
-        border: Border.all(color: borderColor, width: 1.5),
+        border: Border.all(color: AppColors.woodLight, width: 2.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.36 : 0.05),
-            blurRadius: isDark ? 42 : 30,
-            offset: Offset(0, isDark ? 18 : 10),
+            color: AppColors.woodDark.withValues(alpha: 0.3),
+            offset: Offset(0, 4),
           ),
         ],
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(borderRadius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: blurRadius, sigmaY: blurRadius),
-          child: Padding(padding: padding, child: child),
-        ),
-      ),
+      child: child,
     );
 
     if (onTap != null) {

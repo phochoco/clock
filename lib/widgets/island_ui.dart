@@ -83,9 +83,12 @@ class _JjakkagiState extends State<Jjakkagi>
         ),
         child: SizedBox(
           height: widget.height,
-          width: widget.height * 1.4,
           child: AnimatedSwitcher(
             duration: Duration(milliseconds: 300),
+            layoutBuilder: (current, previous) => Stack(
+              alignment: Alignment.bottomLeft,
+              children: [...previous, ?current],
+            ),
             transitionBuilder: (child, animation) => ScaleTransition(
               scale: CurvedAnimation(
                 parent: animation,
@@ -251,4 +254,95 @@ class ChunkyButton extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 모래색 이름표 (화면 제목)
+class IslandTitleChip extends StatelessWidget {
+  const IslandTitleChip({super.key, required this.title, this.leading});
+
+  final String title;
+  final Widget? leading;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(leading == null ? 16 : 6, 6, 16, 6),
+      decoration: BoxDecoration(
+        color: AppColors.mapSand,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppColors.woodLight, width: 2),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.15),
+            blurRadius: 6,
+            offset: Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (leading != null) ...[leading!, SizedBox(width: 6)],
+          Flexible(
+            child: Text(
+              title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+                color: AppColors.woodDark,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// 뒤로 가기 + 가운데 이름표 + 오른쪽 자리로 된 상단 바
+class IslandTopBar extends StatelessWidget {
+  const IslandTopBar({
+    super.key,
+    required this.title,
+    this.leading,
+    this.trailing,
+  });
+
+  final String title;
+  final Widget? leading;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Row(
+        children: [
+          SandIconButton(
+            tooltip: '뒤로 가기',
+            icon: Icons.arrow_back_rounded,
+            onPressed: () => Navigator.pop(context),
+          ),
+          SizedBox(width: 8),
+          Expanded(
+            child: Center(
+              child: IslandTitleChip(title: title, leading: leading),
+            ),
+          ),
+          SizedBox(width: 8),
+          trailing ?? SizedBox(width: 48),
+        ],
+      ),
+    );
+  }
+}
+
+/// Scaffold.appBar 자리에 쓰는 보물섬 상단 바
+PreferredSizeWidget islandAppBar(String title) {
+  return PreferredSize(
+    preferredSize: Size.fromHeight(64),
+    child: SafeArea(bottom: false, child: IslandTopBar(title: title)),
+  );
 }
