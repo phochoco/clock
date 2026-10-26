@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:myclock/models/clock_time.dart';
 import 'package:myclock/models/quiz_level.dart';
 import 'package:myclock/utils/clock_hint.dart';
+import 'package:myclock/utils/korean_text.dart';
 
 void main() {
   group('level unlock', () {
@@ -57,8 +58,17 @@ void main() {
           ClockTime(hour: 4, minute: 30),
           ClockTime(hour: 11, minute: 30),
         ),
-        '짧은 바늘은 11에서 12 쪽으로 조금 가 있어야 해!',
+        '짧은 바늘은 숫자 11과 12 사이에 있어야 해!',
       );
+    });
+  });
+
+  group('korean word wrap', () {
+    test('joins syllables inside a word but keeps spaces breakable', () {
+      final text = '새 시계를 열 수 있어요'.keepWords;
+      expect(text.replaceAll('\u2060', ''), '새 시계를 열 수 있어요');
+      expect(text.split(' ').last, '있\u2060어\u2060요');
+      expect('7시에 별!'.keepWords, '7\u2060시\u2060에 별!');
     });
   });
 }

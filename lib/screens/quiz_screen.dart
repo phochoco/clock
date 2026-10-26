@@ -1,5 +1,4 @@
 import 'dart:math' as math;
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import '../models/clock_time.dart';
 import '../models/quiz_level.dart';
@@ -9,7 +8,9 @@ import '../models/clock_theme.dart';
 import '../services/reward_service.dart';
 import '../services/theme_service.dart';
 import '../services/tts_service.dart';
+import '../services/voice_lines.dart';
 import '../utils/clock_hint.dart';
+import '../utils/korean_text.dart';
 import '../utils/colors.dart';
 import '../utils/haptic.dart';
 import '../widgets/analog_clock.dart';
@@ -29,7 +30,7 @@ class QuizScreen extends StatefulWidget {
 
 class _QuizScreenState extends State<QuizScreen> {
   static const int questionsPerLevel = 5; // 레벨당 문제 수
-  static const _idleLine = '바늘을 돌려서 맞춰 봐!';
+  static const _idleLine = VoiceLines.quizIdle;
 
   late final QuizSession _session;
   var _isSavingAnswer = false;
@@ -38,9 +39,6 @@ class _QuizScreenState extends State<QuizScreen> {
 
   // 선택된 테마
   ClockTheme _selectedTheme = ClockThemeList.basic;
-
-  // 오디오 플레이어
-  final AudioPlayer _audioPlayer = AudioPlayer();
 
   // 지도와 같은 잠금 기준
   Set<int> _completedLevels = {};
@@ -69,7 +67,6 @@ class _QuizScreenState extends State<QuizScreen> {
   @override
   void dispose() {
     TtsService.stop();
-    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -103,7 +100,7 @@ class _QuizScreenState extends State<QuizScreen> {
     final token = ++_questionToken;
     Future.delayed(Duration(milliseconds: 500), () {
       if (mounted && token == _questionToken) {
-        TtsService.speak('${question.answerText}을 만들어봐요!');
+        TtsService.speak(VoiceLines.quizQuestion(question));
       }
     });
   }
@@ -126,7 +123,7 @@ class _QuizScreenState extends State<QuizScreen> {
     if (!_isOpen(level)) {
       final previous = TreasureIsland.of(level.previous!);
       HapticHelper.vibrate();
-      _setMascot(MascotPose.think, '${previous.name}부터 탐험해 줘!');
+      _setMascot(MascotPose.think, VoiceLines.exploreFirst(previous.name));
       TtsService.speak(_mascotLine);
       return;
     }
@@ -134,7 +131,7 @@ class _QuizScreenState extends State<QuizScreen> {
       _session.switchLevel(level);
       _resetClock();
       _mascotPose = MascotPose.point;
-      _mascotLine = '${TreasureIsland.of(level).name}에 도착했어!';
+      _mascotLine = VoiceLines.arrivedAt(TreasureIsland.of(level).name);
     });
     _speakCurrentQuestion();
   }
@@ -159,10 +156,15 @@ class _QuizScreenState extends State<QuizScreen> {
     setState(() => _isSavingAnswer = result.isCorrect);
 
     if (result.isCorrect) {
-      final combo = _session.showCombo ? ' ${_session.comboMessage}' : '';
-      _setMascot(MascotPose.cheer, '정답이야! 별 +${result.earnedStars}$combo');
+      _setMascot(
+        MascotPose.cheer,
+        VoiceLines.correct(
+          result.earnedStars,
+          _session.showCombo ? _session.comboMessage : '',
+        ),
+      );
+      TtsService.speak(_mascotLine);
       await RewardService.addStars(result.earnedStars);
-      await _audioPlayer.play(AssetSource('good/good.mp3'));
       HapticHelper.heavyImpact();
     } else {
       final hint = ClockHint.forAnswer(
@@ -204,7 +206,9 @@ class _QuizScreenState extends State<QuizScreen> {
     });
 
     final nextLevel = level.next;
-    final title = nextLevel == null ? '모든 섬을 탐험했어요!' : '${island.name} 탐험 완료!';
+    final title = nextLevel == null
+        ? VoiceLines.allIslandsComplete
+        : VoiceLines.islandComplete(island.name);
     TtsService.speak(title);
 
     showDialog(
@@ -368,21 +372,9 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   Widget _buildClock(double size) {
-    return Container(
-      width: size + 20,
-      height: size + 20,
-      padding: EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: Colors.white.withValues(alpha: 0.35),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.white.withValues(alpha: 0.4),
-            blurRadius: 24,
-            spreadRadius: 4,
-          ),
-        ],
-      ),
+    return SizedBox(
+      width: size,
+      height: size,
       child: AnalogClock(
         key: _clockKey,
         initialTime: ClockTime(hour: 12, minute: 0),
@@ -647,7 +639,7 @@ class _TreasureDialog extends StatelessWidget {
             ),
             SizedBox(height: 6),
             Text(
-              message,
+              message.keepWords,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15,

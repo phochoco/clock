@@ -7,6 +7,9 @@ import '../models/clock_time.dart';
 import '../models/clock_theme.dart';
 import '../utils/haptic.dart';
 import 'clock_painter.dart';
+import 'clock_ambient_painter.dart';
+import 'illustrated_clock_painter.dart';
+import '../models/clock_face_art.dart';
 
 /// 인터랙티브 아날로그 시계 위젯
 /// Geared Movement와 원형 제스처 인식 구현
@@ -35,7 +38,7 @@ class AnalogClock extends StatefulWidget {
 }
 
 class AnalogClockState extends State<AnalogClock>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late double _minuteAngle;
   late double _hourAngle;
   double _secondAngle = 0.0;
@@ -45,6 +48,12 @@ class AnalogClockState extends State<AnalogClock>
 
   // 별 깜빡임 애니메이션
   late AnimationController _flickerController;
+
+  // 시계판 안의 테마 장식이 움직이는 시간 (0→1 반복)
+  late final AnimationController _ambientController = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 12),
+  )..repeat();
   late Animation<double> _flickerAnimation;
 
   // 비동기 로드된 테마 배경 이미지
@@ -113,6 +122,10 @@ class AnalogClockState extends State<AnalogClock>
 
   /// 이미지 에셋을 비동기로 로드하여 ui.Image 로 변환
   Future<void> _loadBackgroundImage(String? path) async {
+    // 일러스트 테두리를 쓰는 테마는 예전 배경 이미지를 쓰지 않는다
+    if (ClockFaceArt.of(widget.theme?.id ?? 'basic_clock') != null) {
+      path = null;
+    }
     if (path == null) {
       if (mounted) setState(() => _backgroundImage = null);
       return;
@@ -138,6 +151,7 @@ class AnalogClockState extends State<AnalogClock>
   void dispose() {
     _secondTimer?.cancel();
     _flickerController.dispose(); // 애니메이션 컨트롤러 정리
+    _ambientController.dispose();
     super.dispose();
   }
 
@@ -257,11 +271,82 @@ class AnalogClockState extends State<AnalogClock>
     }
   }
 
+  /// 시계 일러스트 테두리 + 새로 그린 시계판·바늘
+  ///
+  /// 그림 속 시계판 중심을 위젯 중심(바늘을 돌리는 기준점)에 맞춘다.
+  /// 시계판은 위젯의 약 38% 반지름으로 맞추되, 장식이 큰 그림은 너무 커지지 않게 줄인다.
+  Widget _buildIllustrated(ClockFaceArt art, Size size) {
+    final side = min(size.width, size.height);
+    final artSize = min(side * 1.25, side * 0.4 / art.r);
+    final faceRadius = art.r * artSize;
+    final center = Offset(size.width / 2, size.height / 2);
+    final themeId = widget.theme?.id ?? 'basic_clock';
+
+    return SizedBox(
+      width: size.width,
+      height: size.height,
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Positioned.fill(
+            child: CustomPaint(
+              painter: IllustratedClockPainter(
+                layer: ClockLayer.face,
+                art: art,
+                faceRadius: faceRadius,
+              ),
+            ),
+          ),
+          Positioned.fill(
+            child: RepaintBoundary(
+              child: AnimatedBuilder(
+                animation: _ambientController,
+                builder: (context, _) => CustomPaint(
+                  painter: ClockAmbientPainter(
+                    themeId: themeId,
+                    faceRadius: faceRadius,
+                    t: _ambientController.value,
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Positioned(
+            left: center.dx - art.cx * artSize,
+            top: center.dy - art.cy * artSize,
+            width: artSize,
+            height: artSize,
+            child: Image.asset(
+              art.assetFor(themeId),
+              fit: BoxFit.fill,
+              filterQuality: FilterQuality.medium,
+            ),
+          ),
+          Positioned.fill(
+            child: CustomPaint(
+              painter: IllustratedClockPainter(
+                layer: ClockLayer.dial,
+                art: art,
+                faceRadius: faceRadius,
+                hourAngle: _hourAngle,
+                minuteAngle: _minuteAngle,
+                secondAngle: _secondAngle,
+                showGuideline: widget.showGuideline,
+                showMinuteNumbers: widget.showMinuteNumbers,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
+        final art = ClockFaceArt.of(widget.theme?.id ?? 'basic_clock');
 
         return GestureDetector(
           behavior: HitTestBehavior.opaque, // 터치 영역 확대
@@ -275,45 +360,47 @@ class AnalogClockState extends State<AnalogClock>
             size,
           ),
           onPanUpdate: (details) => _handlePanUpdate(details, size),
-          child: Container(
-            width: 300,
-            height: 300,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: widget.theme?.backgroundGradient,
-              color: widget.theme?.backgroundGradient == null
-                  ? (widget.theme?.backgroundColor ?? Colors.white)
-                  : null,
-              border: Border.all(
-                color: Color(0xFFE8D5C4), // 베이지 테두리
-                width: 8,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
-                  blurRadius: 20,
-                  offset: Offset(0, 10),
-                ),
-              ],
-            ),
-            child: AnimatedBuilder(
-              animation: _flickerAnimation,
-              builder: (context, child) {
-                return CustomPaint(
-                  painter: ClockPainter(
-                    hourAngle: _hourAngle,
-                    minuteAngle: _minuteAngle,
-                    secondAngle: _secondAngle,
-                    showGuideline: widget.showGuideline,
-                    showMinuteNumbers: widget.showMinuteNumbers,
-                    theme: widget.theme,
-                    flickerValue: _flickerAnimation.value, // 애니메이션 값 전달
-                    backgroundImage: _backgroundImage, // 로드된 이미지 타겟
+          child: art != null
+              ? _buildIllustrated(art, size)
+              : Container(
+                  width: 300,
+                  height: 300,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: widget.theme?.backgroundGradient,
+                    color: widget.theme?.backgroundGradient == null
+                        ? (widget.theme?.backgroundColor ?? Colors.white)
+                        : null,
+                    border: Border.all(
+                      color: Color(0xFFE8D5C4), // 베이지 테두리
+                      width: 8,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.2),
+                        blurRadius: 20,
+                        offset: Offset(0, 10),
+                      ),
+                    ],
                   ),
-                );
-              },
-            ),
-          ),
+                  child: AnimatedBuilder(
+                    animation: _flickerAnimation,
+                    builder: (context, child) {
+                      return CustomPaint(
+                        painter: ClockPainter(
+                          hourAngle: _hourAngle,
+                          minuteAngle: _minuteAngle,
+                          secondAngle: _secondAngle,
+                          showGuideline: widget.showGuideline,
+                          showMinuteNumbers: widget.showMinuteNumbers,
+                          theme: widget.theme,
+                          flickerValue: _flickerAnimation.value, // 애니메이션 값 전달
+                          backgroundImage: _backgroundImage, // 로드된 이미지 타겟
+                        ),
+                      );
+                    },
+                  ),
+                ),
         );
       },
     );

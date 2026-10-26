@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/quiz_level.dart';
 import '../services/reward_service.dart';
+import '../utils/korean_text.dart';
 import '../utils/colors.dart';
 import '../widgets/island_ui.dart';
 import '../widgets/glass_container.dart';
@@ -40,7 +41,7 @@ class GameModeScreen extends StatelessWidget {
                 context,
                 icon: Icons.quiz_rounded,
                 title: '섬 퀴즈',
-                description: '지도의 다음 섬 문제를 풀고\n별을 모아요!',
+                description: '지도의 다음 섬 문제를 풀고 별을 모아요!',
                 color: AppColors.minuteBlue,
                 onTap: () async {
                   final completed = await RewardService.getCompletedLevels();
@@ -63,7 +64,7 @@ class GameModeScreen extends StatelessWidget {
                 context,
                 icon: Icons.auto_stories_rounded,
                 title: '시계 마을 대모험',
-                description: '캐릭터와 함께 하루 일과를\n따라가며 시간을 배워요!',
+                description: '캐릭터와 함께 하루 일과를 따라가며 시간을 배워요!',
                 color: AppColors.success,
                 onTap: () {
                   Navigator.push(
@@ -79,7 +80,7 @@ class GameModeScreen extends StatelessWidget {
                 context,
                 icon: Icons.camera_alt_rounded,
                 title: '빙글빙글 타임 스냅',
-                description: '돌아가는 바늘을\n목표 시간에 멈춰요!',
+                description: '돌아가는 바늘을 목표 시간에 멈춰요!',
                 color: AppColors.secondary,
                 onTap: () {
                   Navigator.push(
@@ -96,7 +97,7 @@ class GameModeScreen extends StatelessWidget {
                 context,
                 icon: Icons.timer_rounded,
                 title: '타임 어택',
-                description: '60초 동안 시계 문제를\n풀어봐요!',
+                description: '60초 동안 시계 문제를 풀어봐요!',
                 color: AppColors.hourRed,
                 onTap: () {
                   Navigator.push(
@@ -113,7 +114,7 @@ class GameModeScreen extends StatelessWidget {
                 context,
                 icon: Icons.calendar_today_rounded,
                 title: '데일리 챌린지',
-                description: '매일 새 문제 3개를 풀고\n보너스 별을 받아요!',
+                description: '매일 새 문제 3개를 풀고 보너스 별을 받아요!',
                 color: AppColors.warning,
                 onTap: () {
                   Navigator.push(
@@ -142,7 +143,7 @@ class GameModeScreen extends StatelessWidget {
     return GlassContainer(
       onTap: onTap,
       width: double.infinity,
-      padding: EdgeInsets.all(24),
+      padding: EdgeInsets.symmetric(horizontal: 18, vertical: 20),
       borderRadius: 24,
       opacity: 0.4,
       child: Stack(
@@ -151,31 +152,36 @@ class GameModeScreen extends StatelessWidget {
             children: [
               // 아이콘 컨테이너
               Container(
-                width: 70,
-                height: 70,
+                width: 60,
+                height: 60,
                 decoration: BoxDecoration(
                   color: color.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: Icon(icon, size: 36, color: color),
+                child: Icon(icon, size: 32, color: color),
               ),
-              SizedBox(width: 20),
+              SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.w800,
-                        color: AppColors.textDark,
-                        letterSpacing: 0,
+                    FittedBox(
+                      fit: BoxFit.scaleDown,
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        title,
+                        maxLines: 1,
+                        style: TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: AppColors.textDark,
+                          letterSpacing: 0,
+                        ),
                       ),
                     ),
                     SizedBox(height: 6),
                     Text(
-                      description,
+                      description.keepWords,
                       style: TextStyle(
                         fontSize: 15,
                         color: AppColors.textLight,

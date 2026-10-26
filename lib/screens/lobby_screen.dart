@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/quiz_level.dart';
 import '../services/reward_service.dart';
 import '../services/tts_service.dart';
+import '../services/voice_lines.dart';
 import '../utils/colors.dart';
 import '../widgets/island_ui.dart';
 import '../widgets/treasure_map.dart';
@@ -49,9 +50,9 @@ class _LobbyScreenState extends State<LobbyScreen> {
   }
 
   String get _defaultMascotLine {
-    if (_allLevelsComplete) return '모든 섬을 탐험했어! 다시 가 볼까?';
-    if (_completedLevels.isEmpty) return '함께 보물섬으로 떠나자!';
-    return '${TreasureIsland.of(_recommendedLevel).name}으로 떠나자!';
+    if (_allLevelsComplete) return VoiceLines.lobbyAllDone;
+    if (_completedLevels.isEmpty) return VoiceLines.lobbyStart;
+    return VoiceLines.lobbySailTo(TreasureIsland.of(_recommendedLevel).name);
   }
 
   void _say(String line) {
@@ -70,7 +71,7 @@ class _LobbyScreenState extends State<LobbyScreen> {
   void _onIslandTap(TreasureIsland island, IslandState state) {
     if (state == IslandState.locked) {
       final previous = TreasureIsland.of(island.level.previous!);
-      _say('${previous.name}부터 탐험해 줘!');
+      _say(VoiceLines.exploreFirst(previous.name));
       return;
     }
     _open(QuizScreen(initialLevel: island.level));
@@ -138,25 +139,24 @@ class _LobbyScreenState extends State<LobbyScreen> {
   void _showGuardianInfoDialog() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.shield_outlined, color: AppColors.appleBlue),
-            SizedBox(width: 8),
-            Text('보호자 안내'),
-          ],
-        ),
-        content: Text(
-          '학습 기록과 별, 선택한 시계는 기기에만 저장됩니다.\n\n'
-          '광고, 계정 가입, 외부 전송 없이 사용할 수 있습니다.\n\n'
-          '문의: yeajunss@naver.com',
-          style: TextStyle(height: 1.45),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('확인'),
+      builder: (context) => IslandDialog(
+        top: Container(
+          width: 64,
+          height: 64,
+          decoration: BoxDecoration(
+            color: AppColors.appleBlue,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 3),
           ),
+          child: Icon(Icons.shield_rounded, color: Colors.white, size: 34),
+        ),
+        title: '보호자 안내',
+        message:
+            '학습 기록과 별, 선택한 시계는 기기에만 저장됩니다.\n\n'
+            '광고, 계정 가입, 외부 전송 없이 사용할 수 있습니다.\n\n'
+            '문의: studiophochoco@gmail.com',
+        actions: [
+          SandChunkyButton(label: '확인', onTap: () => Navigator.pop(context)),
         ],
       ),
     );

@@ -1,19 +1,20 @@
-import 'dart:ui';
-import 'dart:math';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import '../utils/colors.dart';
-import '../models/reward.dart';
 import '../models/clock_theme.dart';
+import '../models/clock_time.dart';
+import '../models/quiz_level.dart';
+import '../models/reward.dart';
 import '../services/reward_service.dart';
 import '../services/theme_service.dart';
-import '../widgets/glass_container.dart';
-import '../widgets/island_ui.dart';
-import '../widgets/mesh_background.dart';
+import '../utils/colors.dart';
+import '../utils/korean_text.dart';
 import '../widgets/analog_clock.dart';
-import '../models/clock_time.dart';
+import '../widgets/clock_theme_icon.dart';
+import '../widgets/island_ui.dart';
+import '../widgets/treasure_map.dart';
 
-/// 보상방 화면
-/// 획득한 아이템과 업적 표시
+/// 내 시계들 화면
+/// 섬을 깨서 받은 시계와 별로 여는 시계를 모아 보고 고르는 보물 창고
 class RewardScreen extends StatefulWidget {
   const RewardScreen({super.key});
 
@@ -21,14 +22,14 @@ class RewardScreen extends StatefulWidget {
   State<RewardScreen> createState() => _RewardScreenState();
 }
 
+enum _ClockStatus { inUse, owned, islandReward, forSale }
+
 class _RewardScreenState extends State<RewardScreen> {
   List<String> _unlockedRewards = [];
-  int _completedLevelCount = 0;
-  int _unlockedRewardCount = 0;
-  int _totalStars = 0; // 별 개수 추가
+  int _totalStars = 0;
   String _selectedThemeId = 'basic_clock';
   bool _isLoading = true;
-  int _selectedTabIndex = 0; // 0: 보유 시계, 1: 새 시계
+  int _selectedTabIndex = 0; // 0: 모은 시계, 1: 별로 열기
 
   @override
   void initState() {
@@ -38,43 +39,62 @@ class _RewardScreenState extends State<RewardScreen> {
 
   Future<void> _loadData() async {
     final unlockedRewards = await RewardService.getUnlockedRewards();
-    final completedLevelCount = await RewardService.getCompletedLevelCount();
-    final unlockedRewardCount = await RewardService.getUnlockedRewardCount();
-    final totalStars = await RewardService.getTotalStars(); // 별 개수 로드
+    final totalStars = await RewardService.getTotalStars();
     final selectedThemeId = await ThemeService.getSelectedThemeId();
 
+    if (!mounted) return;
     setState(() {
       _unlockedRewards = unlockedRewards;
-      _completedLevelCount = completedLevelCount;
-      _unlockedRewardCount = unlockedRewardCount;
-      _totalStars = totalStars; // 별 개수 저장
+      _totalStars = totalStars;
       _selectedThemeId = selectedThemeId;
       _isLoading = false;
     });
   }
 
+  bool _owns(ClockTheme theme) => _unlockedRewards.contains(theme.id);
+
+  _ClockStatus _statusOf(ClockTheme theme) {
+    if (theme.id == _selectedThemeId) return _ClockStatus.inUse;
+    if (_owns(theme)) return _ClockStatus.owned;
+    return theme.isPremium ? _ClockStatus.forSale : _ClockStatus.islandReward;
+  }
+
+  /// 섬 보상 시계를 주는 섬 (무료 시계만)
+  TreasureIsland? _islandFor(ClockTheme theme) {
+    final reward = RewardList.all.where((r) => r.themeId == theme.id);
+    if (reward.isEmpty || reward.first.levelRequired < 1) return null;
+    return TreasureIsland.of(QuizLevel.values[reward.first.levelRequired - 1]);
+  }
+
+  List<ClockTheme> get _collectionThemes => [
+    ...ClockThemeList.freeThemes,
+    ...ClockThemeList.premiumThemes.where(_owns),
+  ];
+
+  List<ClockTheme> get _shopThemes =>
+      [...ClockThemeList.premiumThemes]
+        ..sort((a, b) => a.starCost.compareTo(b.starCost));
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.mapSea,
-      body: MeshBackground(
+      body: IslandSeaBackground(
         child: SafeArea(
           child: _isLoading
               ? Center(child: CircularProgressIndicator())
               : Column(
                   children: [
-                    _buildTopBar(context),
-                    SizedBox(height: 20),
-                    _buildStats(),
-                    _buildPracticeHint(),
-                    SizedBox(height: 20),
-                    _buildTabBar(),
-                    SizedBox(height: 20),
-                    Expanded(
-                      child: _selectedTabIndex == 0
-                          ? _buildRewardGrid()
-                          : _buildStoreGrid(),
+                    IslandTopBar(
+                      title: '내 시계들',
+                      trailing: _StarPill(stars: _totalStars),
                     ),
+                    SizedBox(height: 12),
+                    _buildCollectionHeader(),
+                    SizedBox(height: 14),
+                    _buildTabs(),
+                    SizedBox(height: 12),
+                    Expanded(child: _buildGrid()),
                   ],
                 ),
         ),
@@ -82,1107 +102,714 @@ class _RewardScreenState extends State<RewardScreen> {
     );
   }
 
-  Widget _buildTopBar(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 8),
-      child: IslandTopBar(title: '내 시계들'),
-    );
-  }
-
-  Widget _buildStats() {
-    final int totalThemes = ClockThemeList.all.length; // 모든 시계 기준
-    final double progress = totalThemes > 0
-        ? _unlockedRewardCount / totalThemes
-        : 0.0;
+  Widget _buildCollectionHeader() {
+    final total = ClockThemeList.all.length;
+    final owned = ClockThemeList.all.where(_owns).length;
 
     return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 24),
-      child: GlassContainer(
-        padding: EdgeInsets.all(20),
-        borderRadius: 20,
-        opacity: 0.78,
-        blurRadius: 18,
-        child: Column(
-          children: [
-            // 기존 3가지 메인 스탯
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildStatItem(
-                  Icons.emoji_events_rounded,
-                  Colors.amber,
-                  '레벨',
-                  '$_completedLevelCount',
-                ),
-                _buildStatItem(
-                  Icons.star_rounded,
-                  AppColors.appleYellow,
-                  '별',
-                  '$_totalStars',
-                ),
-                _buildStatItem(
-                  Icons.watch_rounded,
-                  AppColors.appleBlue,
-                  '시계',
-                  '$_unlockedRewardCount',
-                ),
-              ],
-            ),
-            SizedBox(height: 20),
-            // 모은 시계 진행률 바
-            Row(
-              children: [
-                Icon(
-                  Icons.collections_bookmark_rounded,
-                  color: AppColors.textLight,
-                  size: 24,
-                ),
-                SizedBox(width: 8),
-                Text(
-                  '모은 시계',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                Spacer(),
-                Text(
-                  '$_unlockedRewardCount / $totalThemes ( ${(progress * 100).toInt()}% )',
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.textLight,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: 8),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(10),
-              child: LinearProgressIndicator(
-                value: progress,
-                minHeight: 12,
-                backgroundColor: AppColors.borderLight,
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.appleBlue),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPracticeHint() {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-      child: GlassContainer(
-        padding: EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        borderRadius: 20,
-        opacity: 0.78,
-        blurRadius: 18,
-        child: Row(
-          children: [
-            Container(
-              width: 46,
-              height: 46,
-              decoration: BoxDecoration(
-                color: AppColors.appleYellow.withValues(alpha: 0.2),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                Icons.school_rounded,
-                color: AppColors.warning,
-                size: 24,
-              ),
-            ),
-            SizedBox(width: 14),
-            Expanded(
+      padding: EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: [
+          Jjakkagi(pose: MascotPose.treasure, height: 86),
+          SizedBox(width: 4),
+          Expanded(
+            child: Container(
+              padding: EdgeInsets.fromLTRB(14, 12, 14, 12),
+              decoration: _sandPanel(),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    '별은 연습으로 모아요',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.textDark,
+                  Row(
+                    children: [
+                      Text(
+                        '모은 시계',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.woodDark,
+                        ),
+                      ),
+                      Spacer(),
+                      Text(
+                        '$owned / $total',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                          color: AppColors.treasureOrangeDeep,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 8),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: LinearProgressIndicator(
+                      value: owned / total,
+                      minHeight: 12,
+                      backgroundColor: AppColors.woodLight.withValues(
+                        alpha: 0.25,
+                      ),
+                      valueColor: AlwaysStoppedAnimation(AppColors.mapStar),
                     ),
                   ),
-                  SizedBox(height: 3),
+                  SizedBox(height: 8),
                   Text(
-                    '퀴즈와 오늘의 도전을 마치면 새 시계를 열 수 있어요',
+                    '섬을 탐험하면 시계를 받고, 모은 별로 새 시계를 열 수 있어요.'.keepWords,
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textLight,
+                      color: AppColors.wood,
+                      height: 1.35,
                     ),
                   ),
                 ],
               ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabs() {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16),
+      child: Container(
+        padding: EdgeInsets.all(5),
+        decoration: BoxDecoration(
+          color: AppColors.mapSand,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: AppColors.woodLight, width: 2.5),
+        ),
+        child: Row(
+          children: [
+            _tab(0, Icons.inventory_2_rounded, '모은 시계'),
+            _tab(1, Icons.star_rounded, '별로 열기'),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildStatItem(
-    IconData icon,
-    Color color,
-    String label,
-    String value,
-  ) {
-    return Column(
-      children: [
-        Icon(icon, size: 36, color: color),
-        SizedBox(height: 8),
-        Text(label, style: TextStyle(fontSize: 14, color: AppColors.textLight)),
-        SizedBox(height: 4),
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textDark,
+  Widget _tab(int index, IconData icon, String label) {
+    final selected = _selectedTabIndex == index;
+    return Expanded(
+      child: Semantics(
+        button: true,
+        selected: selected,
+        label: label,
+        excludeSemantics: true,
+        child: GestureDetector(
+          onTap: () => setState(() => _selectedTabIndex = index),
+          child: AnimatedContainer(
+            duration: Duration(milliseconds: 200),
+            height: 46,
+            decoration: BoxDecoration(
+              gradient: selected
+                  ? LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppColors.treasureOrange,
+                        AppColors.treasureOrangeDeep,
+                      ],
+                    )
+                  : null,
+              borderRadius: BorderRadius.circular(23),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  icon,
+                  size: 20,
+                  color: selected ? Colors.white : AppColors.wood,
+                ),
+                SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                    color: selected ? Colors.white : AppColors.wood,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-      ],
+      ),
     );
   }
 
-  Widget _buildRewardGrid() {
+  Widget _buildGrid() {
+    final themes = _selectedTabIndex == 0 ? _collectionThemes : _shopThemes;
     return GridView.builder(
-      padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+      padding: EdgeInsets.fromLTRB(16, 4, 16, 24),
       physics: BouncingScrollPhysics(),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-        childAspectRatio: 0.7, // 뱃지 및 상태 텍스트로 인한 오버플로우 방지를 위해 더 길쭉하게 배치
+        crossAxisSpacing: 14,
+        mainAxisSpacing: 14,
+        childAspectRatio: 0.82,
       ),
-      itemCount: RewardList.all.length,
-      itemBuilder: (context, index) {
-        final reward = RewardList.all[index];
-        final unlocked = _unlockedRewards.contains(reward.id);
-        final isSelected = _selectedThemeId == reward.themeId;
-        final rarity = _getThemeRarity(reward.themeId);
+      itemCount: themes.length,
+      itemBuilder: (context, index) => _buildCard(themes[index]),
+    );
+  }
 
-        return GestureDetector(
-          onTap: unlocked ? () => _showRewardDialog(reward) : null,
+  Widget _buildCard(ClockTheme theme) {
+    final status = _statusOf(theme);
+    final inUse = status == _ClockStatus.inUse;
+    final locked =
+        status == _ClockStatus.islandReward || status == _ClockStatus.forSale;
+
+    return Semantics(
+      button: true,
+      label: '${theme.name}, ${_statusLabel(theme, status)}',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: () => _onCardTap(theme, status),
+        child: Container(
+          padding: EdgeInsets.fromLTRB(10, 14, 10, 12),
+          decoration: _sandPanel(
+            borderColor: inUse ? AppColors.treasureOrange : null,
+            borderWidth: inUse ? 4 : 2.5,
+          ),
           child: Stack(
             clipBehavior: Clip.none,
             children: [
-              // 뒤쪽 황금빛 후광 효과 (전설 등급 한정)
-              if (unlocked && rarity == '전설')
-                Positioned.fill(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.amber.withValues(alpha: 0.6),
-                          blurRadius: 40,
-                          spreadRadius: 5,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              // 유리 거치대 (Glass Podium)
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    border: isSelected
-                        ? Border.all(color: AppColors.appleYellow, width: 2)
-                        : null,
-                  ),
-                  child: GlassContainer(
-                    opacity: unlocked ? 0.78 : 0.62,
-                    blurRadius: 18,
-                    borderRadius: 28,
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        // 시계 렌더링 또는 자물쇠 아이콘
-                        unlocked
-                            ? _buildClockPreview(reward)
-                            : Icon(
-                                Icons.lock_rounded,
-                                size: 60,
-                                color: AppColors.textLight,
-                              ),
-                        SizedBox(height: 16),
-                        // 테마 이름
-                        Text(
-                          reward.name,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: unlocked
-                                ? AppColors.textDark
-                                : AppColors.textLight,
-                          ),
-                        ),
-                        // 희귀도 뱃지 또는 잠김 표시
-                        SizedBox(height: 6),
-                        if (unlocked)
-                          _buildRarityBadge(rarity)
-                        else
-                          Text(
-                            '잠김',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppColors.textLight,
-                            ),
-                          ),
-
-                        // 장착 중 텍스트
-                        if (isSelected) ...[
-                          SizedBox(height: 8),
-                          Text(
-                            '사용 중',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.appleYellow,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // 테마 아이디 기반 임시 희귀도 판별 보조함수
-  String _getThemeRarity(String themeId) {
-    if (themeId == 'golden_clock' ||
-        themeId == 'circus_clock' ||
-        themeId == 'crystal_clock') {
-      return '전설';
-    } else if (themeId == 'space_clock' ||
-        themeId == 'night_clock' ||
-        themeId == 'music_clock') {
-      return '희귀';
-    } else {
-      return '일반';
-    }
-  }
-
-  // 희귀도 뱃지 UI 생성
-  Widget _buildRarityBadge(String rarity) {
-    Color badgeColor;
-    if (rarity == '전설') {
-      badgeColor = Colors.amber;
-    } else if (rarity == '희귀') {
-      badgeColor = Colors.purpleAccent;
-    } else {
-      badgeColor = Colors.blueGrey;
-    }
-
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: badgeColor.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: badgeColor.withValues(alpha: 0.5)),
-      ),
-      child: Text(
-        rarity,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
-          color: badgeColor,
-        ),
-      ),
-    );
-  }
-
-  // 시계 미리보기 축소판 렌더링
-  Widget _buildClockPreview(Reward reward) {
-    final theme = ClockThemeList.getThemeById(reward.themeId);
-    return Container(
-      width: 65,
-      height: 65,
-      decoration: BoxDecoration(
-        color: theme.backgroundColor,
-        gradient: theme.backgroundGradient,
-        shape: BoxShape.circle,
-        image: theme.backgroundImage != null
-            ? DecorationImage(
-                image: AssetImage(theme.backgroundImage!),
-                fit: BoxFit.cover,
-              )
-            : null,
-        boxShadow: [
-          BoxShadow(color: Colors.black26, blurRadius: 8, offset: Offset(0, 4)),
-        ],
-      ),
-      child: theme.backgroundImage == null
-          ? Center(child: Icon(reward.icon, size: 35, color: reward.iconColor))
-          : null,
-    );
-  }
-
-  void _showRewardDialog(Reward reward) {
-    final theme = ClockThemeList.getThemeById(reward.themeId);
-    final isSelected = _selectedThemeId == reward.themeId;
-
-    Navigator.of(context).push(
-      PageRouteBuilder(
-        opaque: false, // 반투명 배경 유지
-        pageBuilder: (BuildContext context, animation, secondaryAnimation) {
-          return Scaffold(
-            backgroundColor: Colors.black.withValues(alpha: 0.85),
-            body: SafeArea(
-              child: Column(
+              Column(
                 children: [
-                  // 상단 닫기 기능
-                  Align(
-                    alignment: Alignment.topRight,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: IconButton(
-                        icon: Icon(
-                          Icons.close_rounded,
-                          color: Colors.white,
-                          size: 36,
-                        ),
-                        onPressed: () => Navigator.pop(context),
-                      ),
-                    ),
-                  ),
-
-                  Spacer(),
-
-                  // 메인 풀스크린 시계 (인터랙션 가능)
-                  Text(
-                    '미리보기 (바늘을 움직여 보세요!)',
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
-                  ),
-                  SizedBox(height: 24),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 40.0),
-                    child: AspectRatio(
-                      aspectRatio: 1,
-                      child: AnalogClock(
-                        initialTime: ClockTime(hour: 10, minute: 10),
-                        interactive: true,
-                        showMinuteNumbers: true,
-                        showGuideline: false,
-                        theme: theme,
-                      ),
-                    ),
-                  ),
-
-                  Spacer(),
-
-                  // 하단 장착 UI
-                  GlassContainer(
-                    opacity: 0.2,
-                    borderRadius: 30,
-                    padding: EdgeInsets.symmetric(vertical: 24, horizontal: 32),
-                    child: Column(
+                  Expanded(
+                    child: Stack(
+                      alignment: Alignment.center,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              reward.icon,
-                              color: reward.iconColor,
-                              size: 32,
-                            ),
-                            SizedBox(width: 12),
-                            Text(
-                              reward.name,
-                              style: TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ],
+                        ClockThemeIcon(
+                          theme: theme,
+                          size: 104,
+                          locked: status == _ClockStatus.islandReward,
                         ),
-                        SizedBox(height: 24),
-                        if (isSelected)
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              vertical: 16,
-                              horizontal: 48,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: AppColors.warning,
-                                width: 2,
-                              ),
-                            ),
-                            child: Text(
-                              '현재 사용 중인 시계입니다',
-                              style: TextStyle(
-                                fontSize: 18,
-                                color: AppColors.warning,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          )
-                        else
-                          ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppColors.warning,
-                              padding: EdgeInsets.symmetric(
-                                vertical: 16,
-                                horizontal: 48,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                            ),
-                            onPressed: () async {
-                              await ThemeService.selectTheme(reward.themeId);
-                              if (!mounted || !context.mounted) return;
-                              setState(() {
-                                _selectedThemeId = reward.themeId;
-                              });
-                              Navigator.pop(context); // 풀스크린 닫기
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('${reward.name}(으)로 변경되었습니다!'),
-                                  backgroundColor: AppColors.success,
-                                  duration: Duration(seconds: 2),
-                                ),
-                              );
-                            },
-                            child: Text(
-                              '이 시계로 설정하기',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
+                        if (status == _ClockStatus.islandReward) _LockBadge(),
                       ],
                     ),
                   ),
-                  SizedBox(height: 40),
+                  SizedBox(height: 6),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: Text(
+                      theme.name,
+                      maxLines: 1,
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        color: locked ? AppColors.wood : AppColors.woodDark,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: 6),
+                  _buildStatusChip(theme, status),
                 ],
               ),
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildTabBar() {
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 24),
-      child: GlassContainer(
-        padding: EdgeInsets.zero,
-        borderRadius: 25,
-        opacity: 0.78,
-        blurRadius: 18,
-        child: Row(
-          children: [
-            Expanded(
-              child: GestureDetector(
-                onTap: () => setState(() => _selectedTabIndex = 0),
-                child: Container(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    gradient: _selectedTabIndex == 0
-                        ? LinearGradient(
-                            colors: [AppColors.wood, AppColors.woodDark],
-                          )
-                        : null,
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.redeem_rounded,
-                        size: 20,
-                        color: _selectedTabIndex == 0
-                            ? Colors.white
-                            : AppColors.wood,
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        '보유 시계',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: _selectedTabIndex == 0
-                              ? Colors.white
-                              : AppColors.wood,
-                        ),
-                      ),
-                    ],
+              if (inUse)
+                Positioned(
+                  top: -6,
+                  right: -2,
+                  child: Container(
+                    padding: EdgeInsets.all(3),
+                    decoration: BoxDecoration(
+                      color: AppColors.treasureOrange,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 2),
+                    ),
+                    child: Icon(
+                      Icons.check_rounded,
+                      color: Colors.white,
+                      size: 18,
+                    ),
                   ),
                 ),
-              ),
-            ),
-            Expanded(
-              child: GestureDetector(
-                onTap: () => setState(() => _selectedTabIndex = 1),
-                child: Container(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    gradient: _selectedTabIndex == 1
-                        ? LinearGradient(
-                            colors: [
-                              AppColors.treasureOrange,
-                              AppColors.treasureOrangeDeep,
-                            ],
-                          )
-                        : null,
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.star_rounded,
-                        size: 20,
-                        color: _selectedTabIndex == 1
-                            ? Colors.white
-                            : AppColors.wood,
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        '새 시계',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: _selectedTabIndex == 1
-                              ? Colors.white
-                              : AppColors.wood,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 
-  /// 별로 여는 테마 그리드
-  Widget _buildStoreGrid() {
-    // 최근 추가된 테마가 상단에 보이도록 정렬
-    final premiumThemes = ClockThemeList.premiumThemes.reversed.toList();
+  String _statusLabel(ClockTheme theme, _ClockStatus status) {
+    switch (status) {
+      case _ClockStatus.inUse:
+        return '사용 중';
+      case _ClockStatus.owned:
+        return '고를 수 있음';
+      case _ClockStatus.islandReward:
+        return '${_islandFor(theme)?.name ?? '섬'} 보상';
+      case _ClockStatus.forSale:
+        return '별 ${theme.starCost}개';
+    }
+  }
 
-    return GridView.builder(
-      padding: EdgeInsets.symmetric(horizontal: 24),
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
-        childAspectRatio: 0.75,
-        crossAxisSpacing: 16,
-        mainAxisSpacing: 16,
-      ),
-      itemCount: premiumThemes.length,
-      itemBuilder: (context, index) {
-        final theme = premiumThemes[index];
-        final isUnlocked = _unlockedRewards.contains(theme.id);
-        final canAfford = _totalStars >= theme.starCost;
-
-        return GestureDetector(
-          onTap: () => _showPurchaseDialog(theme, isUnlocked, canAfford),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.92),
-              borderRadius: BorderRadius.circular(28),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.08),
-                  blurRadius: 24,
-                  offset: Offset(0, 12),
-                ),
-              ],
-              border: isUnlocked
-                  ? Border.all(color: AppColors.watchGreen, width: 2)
-                  : Border.all(color: AppColors.borderLight, width: 1),
-            ),
-            child: Stack(
-              children: [
-                // 테마 미리보기
-                Padding(
-                  padding: EdgeInsets.all(16),
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // 시계 아이콘 또는 이미지
-                        Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            Container(
-                              width: 80,
-                              height: 80,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.white.withValues(alpha: 0.3),
-                                image: theme.backgroundImage != null
-                                    ? DecorationImage(
-                                        image: AssetImage(
-                                          theme.backgroundImage!,
-                                        ),
-                                        fit: BoxFit.cover,
-                                      )
-                                    : null,
-                              ),
-                              child: theme.backgroundImage == null
-                                  ? Center(
-                                      child: _buildThemeIcon(
-                                        theme.id,
-                                        isUnlocked: isUnlocked,
-                                      ),
-                                    )
-                                  : null,
-                            ),
-                            if (!isUnlocked)
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(40),
-                                child: BackdropFilter(
-                                  filter: ImageFilter.blur(
-                                    sigmaX: 5.0,
-                                    sigmaY: 5.0,
-                                  ),
-                                  child: Container(
-                                    width: 80,
-                                    height: 80,
-                                    color: Colors.transparent,
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                        SizedBox(height: 12),
-                        Text(
-                          theme.name,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w800,
-                            color: AppColors.textDark,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        SizedBox(height: 8),
-                        // 가격 또는 상태
-                        if (isUnlocked)
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.success,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Text(
-                              '보유 중',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          )
-                        else
-                          Container(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: canAfford
-                                  ? AppColors.appleYellow
-                                  : AppColors.borderLight,
-                              borderRadius: BorderRadius.circular(14),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.star_rounded,
-                                  size: 16,
-                                  color: canAfford
-                                      ? AppColors.textDark
-                                      : AppColors.textLight,
-                                ),
-                                SizedBox(width: 4),
-                                Text(
-                                  '${theme.starCost}',
-                                  style: TextStyle(
-                                    color: canAfford
-                                        ? AppColors.textDark
-                                        : AppColors.textLight,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        if (!isUnlocked && !canAfford) ...[
-                          SizedBox(height: 6),
-                          Text(
-                            '별 ${theme.starCost - _totalStars}개 더',
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textLight,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-                // 잠금 아이콘
-                if (!isUnlocked && !canAfford)
-                  Positioned(
-                    top: 8,
-                    right: 8,
-                    child: Container(
-                      padding: EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: AppColors.textDark.withValues(alpha: 0.72),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.lock, color: Colors.white, size: 20),
-                    ),
-                  ),
-              ],
-            ),
-          ),
+  Widget _buildStatusChip(ClockTheme theme, _ClockStatus status) {
+    switch (status) {
+      case _ClockStatus.inUse:
+        return _Chip(
+          icon: Icons.check_circle_rounded,
+          label: '사용 중',
+          color: Colors.white,
+          background: AppColors.treasureOrange,
         );
-      },
-    );
+      case _ClockStatus.owned:
+        return _Chip(
+          icon: Icons.touch_app_rounded,
+          label: '고르기',
+          color: AppColors.woodDark,
+          background: Colors.white,
+        );
+      case _ClockStatus.islandReward:
+        final island = _islandFor(theme);
+        return _Chip(
+          icon: Icons.sailing_rounded,
+          label: island == null ? '섬 보상' : '${island.level.number}번 섬 보상',
+          color: AppColors.wood,
+          background: AppColors.woodLight.withValues(alpha: 0.18),
+        );
+      case _ClockStatus.forSale:
+        final canAfford = _totalStars >= theme.starCost;
+        return _Chip(
+          icon: Icons.star_rounded,
+          label: canAfford
+              ? '${theme.starCost}'
+              : '${theme.starCost} · ${theme.starCost - _totalStars}개 더',
+          color: AppColors.woodDark,
+          iconColor: AppColors.treasureOrangeDeep,
+          background: canAfford
+              ? AppColors.mapGlow
+              : AppColors.woodLight.withValues(alpha: 0.18),
+        );
+    }
   }
 
-  /// 테마별 아이콘 컴포넌트 가져오기
-  Widget _buildThemeIcon(String themeId, {bool isUnlocked = true}) {
-    IconData icon;
-    Color color;
-    switch (themeId) {
-      case 'golden_clock':
-        icon = Icons.workspace_premium_rounded;
-        color = Colors.amber;
-        break;
-      case 'moonlight_clock':
-        icon = Icons.dark_mode_rounded;
-        color = Colors.indigoAccent;
-        break;
-      case 'crystal_clock':
-        icon = Icons.diamond_rounded;
-        color = Colors.cyanAccent;
-        break;
-      case 'circus_clock':
-        icon = Icons.celebration_rounded;
-        color = Colors.pinkAccent;
-        break;
-      default:
-        icon = Icons.schedule_rounded;
-        color = Colors.blueGrey;
+  void _onCardTap(ClockTheme theme, _ClockStatus status) {
+    switch (status) {
+      case _ClockStatus.inUse:
+      case _ClockStatus.owned:
+        _showPreviewDialog(theme);
+      case _ClockStatus.islandReward:
+        _showIslandRewardDialog(theme);
+      case _ClockStatus.forSale:
+        if (_totalStars >= theme.starCost) {
+          _showPurchaseDialog(theme);
+        } else {
+          _showNeedStarsDialog(theme);
+        }
     }
-    return Icon(
-      icon,
-      size: 40,
-      color: isUnlocked ? color : Colors.grey.withValues(alpha: 0.5),
-    );
   }
 
-  /// 새 시계 열기 확인 다이얼로그
-  void _showPurchaseDialog(ClockTheme theme, bool isUnlocked, bool canAfford) {
-    if (isUnlocked) {
-      // 이미 보유 중인 시계 - 적용하기
-      showDialog(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: Text(theme.name),
-          content: Text('이 시계를 사용할까요?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext),
-              child: Text('취소'),
-            ),
-            ElevatedButton(
-              onPressed: () async {
-                await ThemeService.selectTheme(theme.id);
-                if (!mounted || !dialogContext.mounted) return;
-                setState(() => _selectedThemeId = theme.id);
-                Navigator.pop(dialogContext);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('${theme.name}(으)로 바꿨어요!')),
-                );
-              },
-              child: Text('사용하기'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
+  Future<void> _useTheme(ClockTheme theme) async {
+    await ThemeService.selectTheme(theme.id);
+    if (!mounted) return;
+    setState(() => _selectedThemeId = theme.id);
+  }
 
-    if (!canAfford) {
-      // 별 부족
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: Text('별이 부족합니다'),
-          content: Text(
-            '${theme.name}을(를) 열려면 별 ${theme.starCost}개가 필요합니다.\n'
-            '현재 보유: $_totalStars개 · 더 필요한 별: ${theme.starCost - _totalStars}개',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: Text('확인'),
-            ),
-          ],
-        ),
-      );
-      return;
-    }
-
-    // 새 시계 열기 확인
+  /// 가진 시계 미리보기 (바늘을 움직여 볼 수 있음)
+  void _showPreviewDialog(ClockTheme theme) {
+    final inUse = theme.id == _selectedThemeId;
     showDialog(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text('🌟 ${theme.name} 열기'),
-        content: Column(
+      builder: (dialogContext) => IslandDialog(
+        top: SizedBox(
+          width: 220,
+          height: 220,
+          child: AnalogClock(
+            initialTime: ClockTime(hour: 10, minute: 10),
+            interactive: true,
+            showMinuteNumbers: true,
+            showGuideline: false,
+            theme: theme,
+          ),
+        ),
+        title: theme.name,
+        message: inUse ? '지금 쓰고 있는 시계예요.' : '바늘을 움직여 보고 마음에 들면 골라요!',
+        actions: [
+          ChunkyButton(
+            label: inUse ? '지금 쓰는 시계' : '이 시계 쓰기',
+            icon: Icons.check_rounded,
+            onTap: inUse
+                ? null
+                : () async {
+                    await _useTheme(theme);
+                    if (dialogContext.mounted) Navigator.pop(dialogContext);
+                  },
+          ),
+          SandChunkyButton(
+            label: '닫기',
+            onTap: () => Navigator.pop(dialogContext),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showIslandRewardDialog(ClockTheme theme) {
+    final island = _islandFor(theme);
+    showDialog(
+      context: context,
+      builder: (dialogContext) => IslandDialog(
+        top: Stack(
+          alignment: Alignment.center,
+          children: [
+            ClockThemeIcon(theme: theme, size: 120, locked: true),
+            _LockBadge(),
+          ],
+        ),
+        title: theme.name,
+        message: island == null
+            ? '섬을 탐험하면 받을 수 있어요!'
+            : '${island.level.number}번 ${island.name}을 탐험하면 받을 수 있어요!',
+        actions: [
+          SandChunkyButton(
+            label: '알겠어요',
+            onTap: () => Navigator.pop(dialogContext),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showNeedStarsDialog(ClockTheme theme) {
+    final missing = theme.starCost - _totalStars;
+    showDialog(
+      context: context,
+      builder: (dialogContext) => IslandDialog(
+        top: Jjakkagi(pose: MascotPose.think, height: 110),
+        title: '별이 조금 부족해요',
+        message: '${theme.name}을 열려면 별 $missing개가 더 필요해. 섬 퀴즈와 놀이로 별을 모아 보자!',
+        actions: [
+          SandChunkyButton(
+            label: '알겠어요',
+            onTap: () => Navigator.pop(dialogContext),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPurchaseDialog(ClockTheme theme) {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => IslandDialog(
+        top: ClockThemeIcon(theme: theme, size: 130),
+        title: '${theme.name} 열기',
+        body: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('별을 사용해 이 시계를 열까요?'),
-            SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Text('⭐', style: TextStyle(fontSize: 24)),
-                SizedBox(width: 8),
-                Text(
-                  '${theme.starCost}',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: AppColors.warning,
-                  ),
-                ),
-              ],
+            Icon(Icons.star_rounded, color: AppColors.mapStar, size: 30),
+            SizedBox(width: 4),
+            Text(
+              '${theme.starCost}',
+              style: TextStyle(
+                fontSize: 26,
+                fontWeight: FontWeight.w900,
+                color: AppColors.woodDark,
+              ),
+            ),
+            SizedBox(width: 10),
+            Text(
+              '가진 별 $_totalStars개',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: AppColors.wood,
+              ),
             ),
           ],
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text('취소'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.warning),
-            onPressed: () async {
-              // 별 차감
+          ChunkyButton(
+            label: '별 ${theme.starCost}개로 열기',
+            icon: Icons.lock_open_rounded,
+            onTap: () async {
               final success = await RewardService.spendStars(theme.starCost);
-              if (success) {
-                // 테마 해금
-                await RewardService.unlockReward(theme.id);
-                await _loadData();
-                if (!mounted || !dialogContext.mounted) return;
-                Navigator.pop(dialogContext); // 닫기 (열기 확인)
-
-                // 가챠 언락 애니메이션 실행
-                _showUnlockAnimation(theme);
-              }
+              if (!success) return;
+              await RewardService.unlockReward(theme.id);
+              await _loadData();
+              if (!dialogContext.mounted) return;
+              Navigator.pop(dialogContext);
+              _showUnlockAnimation(theme);
             },
-            child: Text('별로 열기'),
+          ),
+          SandChunkyButton(
+            label: '나중에',
+            onTap: () => Navigator.pop(dialogContext),
           ),
         ],
       ),
     );
   }
 
+  /// 보물상자가 흔들리다 열리며 새 시계가 나오는 연출
   void _showUnlockAnimation(ClockTheme theme) {
-    bool isRevealed = false;
-    bool timerStarted = false;
-
     showGeneralDialog(
       context: context,
       barrierDismissible: false,
-      barrierColor: Colors.black87,
-      transitionDuration: Duration(milliseconds: 600),
-      pageBuilder: (context, animation, secondaryAnimation) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            if (!timerStarted) {
-              timerStarted = true;
-              // 1.5초 후 자동으로 상자 열림
-              Future.delayed(Duration(milliseconds: 1500), () {
-                if (mounted && context.mounted) {
-                  setState(() {
-                    isRevealed = true;
-                  });
-                }
-              });
-            }
+      barrierColor: Colors.black.withValues(alpha: 0.7),
+      transitionDuration: Duration(milliseconds: 300),
+      pageBuilder: (dialogContext, _, _) => _UnlockReveal(
+        theme: theme,
+        onUse: () async {
+          await _useTheme(theme);
+          if (dialogContext.mounted) Navigator.pop(dialogContext);
+        },
+        onKeep: () => Navigator.pop(dialogContext),
+      ),
+    );
+  }
 
-            return Scaffold(
-              backgroundColor: Colors.transparent,
-              body: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      isRevealed ? '🎉 획득 성공! 🎉' : '두근두근...',
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        shadows: [Shadow(color: Colors.amber, blurRadius: 10)],
-                      ),
-                    ),
-                    SizedBox(height: 40),
+  BoxDecoration _sandPanel({Color? borderColor, double borderWidth = 2.5}) {
+    return BoxDecoration(
+      color: AppColors.mapSand,
+      borderRadius: BorderRadius.circular(24),
+      border: Border.all(
+        color: borderColor ?? AppColors.woodLight,
+        width: borderWidth,
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: AppColors.woodDark.withValues(alpha: 0.3),
+          offset: Offset(0, 4),
+        ),
+      ],
+    );
+  }
+}
 
-                    // 언락 애니메이션 요소
-                    AnimatedSwitcher(
-                      duration: Duration(milliseconds: 1500),
-                      switchInCurve: Curves.elasticOut,
-                      switchOutCurve: Curves.easeIn,
-                      transitionBuilder:
-                          (Widget child, Animation<double> animation) {
-                            return ScaleTransition(
-                              scale: animation,
+class _StarPill extends StatelessWidget {
+  const _StarPill({required this.stars});
+
+  final int stars;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: '가진 별 $stars개',
+      excludeSemantics: true,
+      child: Container(
+        padding: EdgeInsets.fromLTRB(6, 4, 10, 4),
+        decoration: BoxDecoration(
+          color: AppColors.mapSand,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.woodLight, width: 2),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.star_rounded, color: AppColors.mapStar, size: 22),
+            SizedBox(width: 2),
+            Text(
+              '$stars',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                color: AppColors.woodDark,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Chip extends StatelessWidget {
+  const _Chip({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.background,
+    this.iconColor,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final Color background;
+  final Color? iconColor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: AppColors.woodLight.withValues(alpha: 0.6),
+          width: 1.5,
+        ),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: iconColor ?? color),
+          SizedBox(width: 4),
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                color: color,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LockBadge extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: AppColors.mapLock,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 3),
+      ),
+      child: Icon(Icons.lock_rounded, color: Colors.white, size: 22),
+    );
+  }
+}
+
+class _UnlockReveal extends StatefulWidget {
+  const _UnlockReveal({
+    required this.theme,
+    required this.onUse,
+    required this.onKeep,
+  });
+
+  final ClockTheme theme;
+  final VoidCallback onUse;
+  final VoidCallback onKeep;
+
+  @override
+  State<_UnlockReveal> createState() => _UnlockRevealState();
+}
+
+class _UnlockRevealState extends State<_UnlockReveal>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _shake;
+  var _revealed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _shake =
+        AnimationController(vsync: this, duration: Duration(milliseconds: 1400))
+          ..forward().whenComplete(() {
+            if (mounted) setState(() => _revealed = true);
+          });
+  }
+
+  @override
+  void dispose() {
+    _shake.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      type: MaterialType.transparency,
+      child: Center(
+        child: Padding(
+          padding: EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                _revealed ? '새 시계를 얻었어요!' : '두근두근...',
+                style: TextStyle(
+                  fontSize: 28,
+                  fontWeight: FontWeight.w900,
+                  color: Colors.white,
+                  shadows: [Shadow(color: AppColors.mapStar, blurRadius: 12)],
+                ),
+              ),
+              SizedBox(height: 28),
+              SizedBox(
+                height: 220,
+                child: AnimatedSwitcher(
+                  duration: Duration(milliseconds: 700),
+                  switchInCurve: Curves.elasticOut,
+                  transitionBuilder: (child, animation) =>
+                      ScaleTransition(scale: animation, child: child),
+                  child: _revealed
+                      ? Container(
+                          key: ValueKey('clock'),
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppColors.mapGlow.withValues(alpha: 0.8),
+                                blurRadius: 50,
+                                spreadRadius: 10,
+                              ),
+                            ],
+                          ),
+                          child: ClockThemeIcon(theme: widget.theme, size: 200),
+                        )
+                      : AnimatedBuilder(
+                          key: ValueKey('chest'),
+                          animation: _shake,
+                          builder: (context, child) {
+                            final v = _shake.value;
+                            return Transform.rotate(
+                              angle: math.sin(v * 34) * 0.12 * v,
                               child: child,
                             );
                           },
-                      child: isRevealed
-                          ? Column(
-                              key: ValueKey('revealed'),
-                              children: [
-                                // 테마 렌더링
-                                Container(
-                                  width: 200,
-                                  height: 200,
-                                  decoration: BoxDecoration(
-                                    color: theme.backgroundColor,
-                                    gradient: theme.backgroundGradient,
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.amber.withValues(
-                                          alpha: 0.8,
-                                        ),
-                                        blurRadius: 50,
-                                        spreadRadius: 20,
-                                      ),
-                                    ],
-                                  ),
-                                  child: Center(
-                                    child: Icon(
-                                      Icons.workspace_premium_rounded,
-                                      size: 100,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(height: 20),
-                                Text(
-                                  theme.name,
-                                  style: TextStyle(
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.amber,
-                                  ),
-                                ),
-                              ],
-                            )
-                          : TweenAnimationBuilder<double>(
-                              key: ValueKey('mystery'),
-                              tween: Tween<double>(begin: 0, end: 1),
-                              duration: Duration(milliseconds: 1500),
-                              builder: (context, value, child) {
-                                // 흔들기 각도 계산 (가속되는 진동)
-                                final angle =
-                                    sin(value * 30) *
-                                    0.1 *
-                                    value; // 시간이 갈수록 세게 흔들림
-                                return Transform.rotate(
-                                  angle: angle,
-                                  child: child,
-                                );
-                              },
-                              child: Container(
-                                width: 150,
-                                height: 150,
-                                decoration: BoxDecoration(
-                                  color: Colors.indigoAccent,
-                                  borderRadius: BorderRadius.circular(30),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: AppColors.secondary.withValues(
-                                        alpha: 0.8,
-                                      ),
-                                      blurRadius: 30,
-                                      spreadRadius: 10,
-                                    ),
-                                  ],
-                                ),
-                                child: Center(
-                                  child: Icon(
-                                    Icons.help_outline_rounded,
-                                    size: 80,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                    ),
-
-                    SizedBox(height: 60),
-                    AnimatedOpacity(
-                      opacity: isRevealed ? 1.0 : 0.0,
-                      duration: Duration(milliseconds: 500),
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 40,
-                            vertical: 15,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(30),
+                          child: Image.asset(
+                            'assets/images/map/locked_chest.png',
+                            height: 190,
                           ),
                         ),
-                        onPressed: isRevealed
-                            ? () => Navigator.pop(context)
-                            : null,
-                        child: Text(
-                          '내 시계에 넣기',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.textDark,
-                          ),
-                        ),
+                ),
+              ),
+              SizedBox(height: 16),
+              AnimatedOpacity(
+                opacity: _revealed ? 1 : 0,
+                duration: Duration(milliseconds: 400),
+                child: Column(
+                  children: [
+                    Text(
+                      widget.theme.name,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        color: AppColors.mapGlow,
                       ),
                     ),
+                    SizedBox(height: 20),
+                    ChunkyButton(
+                      label: '바로 쓰기',
+                      icon: Icons.check_rounded,
+                      onTap: _revealed ? widget.onUse : null,
+                    ),
+                    SizedBox(height: 10),
+                    SandChunkyButton(label: '내 시계에 넣기', onTap: widget.onKeep),
                   ],
                 ),
               ),
-            );
-          },
-        );
-      },
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../utils/colors.dart';
+import '../utils/korean_text.dart';
 import '../widgets/island_ui.dart';
 import '../widgets/glass_container.dart';
 import '../widgets/mesh_background.dart';
@@ -9,9 +10,9 @@ import '../models/clock_theme.dart';
 import '../services/theme_service.dart';
 import '../services/reward_service.dart';
 import '../services/tts_service.dart';
+import '../services/voice_lines.dart';
 import '../utils/clock_answer_validator.dart';
 import '../utils/haptic.dart';
-import 'package:audioplayers/audioplayers.dart';
 
 // 스토리 모드의 챕터 모델
 class StoryChapter {
@@ -30,6 +31,45 @@ class StoryChapter {
   });
 }
 
+/// 스토리 챕터 정의
+const storyChapters = [
+  StoryChapter(
+    hour: 7,
+    minute: 0,
+    title: '아침 기상',
+    narration: '아함~ 아침이 밝았어요! 7시에 일어날 시간이에요. 시계를 7시로 맞춰줄래요?',
+    icon: Icons.wb_sunny_rounded,
+  ),
+  StoryChapter(
+    hour: 8,
+    minute: 30,
+    title: '유치원 가는 길',
+    narration: '친구들을 만나러 유치원에 가요. 8시 30분 버스를 타야 해요! 시계를 돌려볼까요?',
+    icon: Icons.directions_bus_rounded,
+  ),
+  StoryChapter(
+    hour: 12,
+    minute: 30,
+    title: '맛있는 점심',
+    narration: '꼬르륵, 배가 고파요. 12시 30분은 점심 시간이에요!',
+    icon: Icons.restaurant_rounded,
+  ),
+  StoryChapter(
+    hour: 15,
+    minute: 0,
+    title: '신나는 놀이터',
+    narration: '유치원이 끝났어요! 3시에 놀이터에서 놀기로 했어요. 3시로 맞춰주세요!',
+    icon: Icons.park_rounded,
+  ),
+  StoryChapter(
+    hour: 21,
+    minute: 0,
+    title: '꿈나라로',
+    narration: '하루가 끝났어요. 9시는 쿨쿨 잠잘 시간이에요. 9시로 시계를 맞추고 자러 가요!',
+    icon: Icons.nights_stay_rounded,
+  ),
+];
+
 class StoryModeScreen extends StatefulWidget {
   const StoryModeScreen({super.key});
 
@@ -38,45 +78,6 @@ class StoryModeScreen extends StatefulWidget {
 }
 
 class _StoryModeScreenState extends State<StoryModeScreen> {
-  // 스토리 챕터 정의
-  final List<StoryChapter> _chapters = const [
-    StoryChapter(
-      hour: 7,
-      minute: 0,
-      title: '아침 기상',
-      narration: '아함~ 아침이 밝았어요! 7시에 일어날 시간이에요. 시계를 7시로 맞춰줄래요?',
-      icon: Icons.wb_sunny_rounded,
-    ),
-    StoryChapter(
-      hour: 8,
-      minute: 30,
-      title: '유치원 가는 길',
-      narration: '친구들을 만나러 유치원에 가요. 8시 30분 버스를 타야 해요! 시계를 돌려볼까요?',
-      icon: Icons.directions_bus_rounded,
-    ),
-    StoryChapter(
-      hour: 12,
-      minute: 30,
-      title: '맛있는 점심',
-      narration: '꼬르륵, 배가 고파요. 12시 30분은 점심 시간이에요!',
-      icon: Icons.restaurant_rounded,
-    ),
-    StoryChapter(
-      hour: 15,
-      minute: 0,
-      title: '신나는 놀이터',
-      narration: '유치원이 끝났어요! 3시에 놀이터에서 놀기로 했어요. 3시로 맞춰주세요!',
-      icon: Icons.park_rounded,
-    ),
-    StoryChapter(
-      hour: 21,
-      minute: 0,
-      title: '꿈나라로',
-      narration: '하루가 끝났어요. 9시는 쿨쿨 잠잘 시간이에요. 9시로 시계를 맞추고 자러 가요!',
-      icon: Icons.nights_stay_rounded,
-    ),
-  ];
-
   int _currentChapterIndex = 0;
   ClockTime? _userAnswer;
   bool _showResult = false;
@@ -84,7 +85,6 @@ class _StoryModeScreenState extends State<StoryModeScreen> {
   final GlobalKey<AnalogClockState> _clockKey = GlobalKey();
 
   ClockTheme _selectedTheme = ClockThemeList.basic;
-  final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
   void initState() {
@@ -108,7 +108,7 @@ class _StoryModeScreenState extends State<StoryModeScreen> {
   void _playNarration() {
     Future.delayed(Duration(milliseconds: 500), () {
       if (mounted) {
-        TtsService.speak(_chapters[_currentChapterIndex].narration);
+        TtsService.speak(storyChapters[_currentChapterIndex].narration);
       }
     });
   }
@@ -116,13 +116,12 @@ class _StoryModeScreenState extends State<StoryModeScreen> {
   @override
   void dispose() {
     TtsService.stop();
-    _audioPlayer.dispose();
     super.dispose();
   }
 
   void _checkAnswer() async {
     if (_userAnswer == null) return;
-    final currentChapter = _chapters[_currentChapterIndex];
+    final currentChapter = storyChapters[_currentChapterIndex];
     final correctTime = ClockTime(
       hour: currentChapter.hour,
       minute: currentChapter.minute,
@@ -134,18 +133,18 @@ class _StoryModeScreenState extends State<StoryModeScreen> {
       _showResult = true;
       _isCorrect = correct;
       if (correct) {
-        _audioPlayer.play(AssetSource('good/good.mp3'));
+        TtsService.speak(VoiceLines.randomPraise());
         HapticHelper.heavyImpact();
       } else {
         HapticHelper.vibrate();
-        TtsService.speak('아직 아니에요. 다시 한 번 맞춰볼까요?');
+        TtsService.speak(VoiceLines.storyRetry);
       }
     });
   }
 
   void _nextChapter() {
     setState(() {
-      if (_currentChapterIndex < _chapters.length - 1) {
+      if (_currentChapterIndex < storyChapters.length - 1) {
         _currentChapterIndex++;
         _showResult = false;
         _userAnswer = null;
@@ -159,7 +158,7 @@ class _StoryModeScreenState extends State<StoryModeScreen> {
   }
 
   void _showCompletionDialog() async {
-    TtsService.speak('우와! 시계 마을 대모험을 무사히 마쳤어요! 축하해요!');
+    TtsService.speak(VoiceLines.storyComplete);
 
     // 이전에 깬 적이 있는지 확인
     final alreadyCompleted = await RewardService.isStoryModeCompleted();
@@ -217,7 +216,7 @@ class _StoryModeScreenState extends State<StoryModeScreen> {
               Padding(
                 padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 child: Row(
-                  children: List.generate(_chapters.length, (index) {
+                  children: List.generate(storyChapters.length, (index) {
                     return Expanded(
                       child: Container(
                         margin: EdgeInsets.symmetric(horizontal: 4),
@@ -244,7 +243,7 @@ class _StoryModeScreenState extends State<StoryModeScreen> {
                   child: Row(
                     children: [
                       Icon(
-                        _chapters[_currentChapterIndex].icon,
+                        storyChapters[_currentChapterIndex].icon,
                         size: 48,
                         color: AppColors.hourRed,
                       ),
@@ -254,7 +253,7 @@ class _StoryModeScreenState extends State<StoryModeScreen> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              _chapters[_currentChapterIndex].title,
+                              storyChapters[_currentChapterIndex].title,
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
@@ -263,7 +262,9 @@ class _StoryModeScreenState extends State<StoryModeScreen> {
                             ),
                             SizedBox(height: 8),
                             Text(
-                              _chapters[_currentChapterIndex].narration,
+                              storyChapters[_currentChapterIndex]
+                                  .narration
+                                  .keepWords,
                               style: TextStyle(
                                 fontSize: 16,
                                 color: AppColors.textDark,
@@ -372,7 +373,9 @@ class _StoryModeScreenState extends State<StoryModeScreen> {
                 ),
               ),
               child: Text(
-                _currentChapterIndex < _chapters.length - 1 ? '다음 이야기' : '완료하기',
+                _currentChapterIndex < storyChapters.length - 1
+                    ? '다음 이야기'
+                    : '완료하기',
                 style: TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.bold,

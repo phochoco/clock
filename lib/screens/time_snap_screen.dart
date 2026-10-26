@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:audioplayers/audioplayers.dart';
+import '../services/tts_service.dart';
+import '../services/voice_lines.dart';
 import '../utils/colors.dart';
 import '../widgets/island_ui.dart';
 import '../utils/haptic.dart';
@@ -35,7 +36,6 @@ class _TimeSnapScreenState extends State<TimeSnapScreen>
   int _score = 0;
 
   ClockTheme _selectedTheme = ClockThemeList.basic;
-  final AudioPlayer _audioPlayer = AudioPlayer();
 
   @override
   void initState() {
@@ -69,7 +69,6 @@ class _TimeSnapScreenState extends State<TimeSnapScreen>
   @override
   void dispose() {
     _spinController.dispose();
-    _audioPlayer.dispose();
     super.dispose();
   }
 
@@ -133,7 +132,7 @@ class _TimeSnapScreenState extends State<TimeSnapScreen>
       // Perfect: 오차 5분 이내 (거의 정확함)
       _judgmentText = 'PERFECT!!';
       _judgmentColor = Colors.amber;
-      _audioPlayer.play(AssetSource('good/good.mp3'));
+      TtsService.speak(VoiceLines.snapPerfect);
       HapticHelper.heavyImpact();
       _combo++;
       _score += 50 + (_combo * 10);

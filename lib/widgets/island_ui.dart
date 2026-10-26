@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/korean_text.dart';
 import '../utils/colors.dart';
 
 /// 보물섬 화면들이 함께 쓰는 공통 위젯 (배경, 째깍이, 말풍선, 버튼)
@@ -140,7 +141,7 @@ class IslandSpeechBubble extends StatelessWidget {
           ],
         ),
         child: Text(
-          text,
+          text.keepWords,
           style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w800,
@@ -345,4 +346,94 @@ PreferredSizeWidget islandAppBar(String title) {
     preferredSize: Size.fromHeight(64),
     child: SafeArea(bottom: false, child: IslandTopBar(title: title)),
   );
+}
+
+/// 모래색 판 위에 그림·제목·내용·버튼을 담는 보물섬 대화상자
+class IslandDialog extends StatelessWidget {
+  const IslandDialog({
+    super.key,
+    this.top,
+    required this.title,
+    this.message,
+    this.body,
+    this.titleColor = AppColors.woodDark,
+    required this.actions,
+  });
+
+  final Widget? top;
+  final String title;
+  final String? message;
+  final Widget? body;
+  final Color titleColor;
+  final List<Widget> actions;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      insetPadding: EdgeInsets.symmetric(horizontal: 24),
+      child: Container(
+        padding: EdgeInsets.fromLTRB(20, 18, 20, 20),
+        decoration: BoxDecoration(
+          color: AppColors.mapSand,
+          borderRadius: BorderRadius.circular(28),
+          border: Border.all(color: AppColors.woodLight, width: 4),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (top != null) ...[top!, SizedBox(height: 8)],
+            Text(
+              title.keepWords,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w900,
+                color: titleColor,
+              ),
+            ),
+            if (message != null) ...[
+              SizedBox(height: 8),
+              Text(
+                message!.keepWords,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.woodDark,
+                  height: 1.45,
+                ),
+              ),
+            ],
+            if (body != null) ...[SizedBox(height: 12), body!],
+            SizedBox(height: 18),
+            for (var i = 0; i < actions.length; i++) ...[
+              if (i > 0) SizedBox(height: 10),
+              actions[i],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// 대화상자 아래쪽 보조 버튼 (닫기, 나중에 등)
+class SandChunkyButton extends StatelessWidget {
+  const SandChunkyButton({super.key, required this.label, required this.onTap});
+
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return ChunkyButton(
+      label: label,
+      height: 52,
+      topColor: Colors.white,
+      bottomColor: Color(0xFFF3DDAF),
+      textColor: AppColors.woodDark,
+      onTap: onTap,
+    );
+  }
 }

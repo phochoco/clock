@@ -1,10 +1,36 @@
+import 'dart:convert';
 import 'dart:io';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
+/// 째깍이 목소리
+///
+/// 미리 녹음한 음성(assets/voice, ElevenLabs로 생성)이 있는 문장은 그 파일을 재생하고,
+/// 없는 문장만 기기 TTS로 읽는다. 문장과 파일은 manifest.json으로 연결된다.
 class TtsService {
   static final FlutterTts _flutterTts = FlutterTts();
+  static final AudioPlayer _voicePlayer = AudioPlayer();
   static bool _isInitialized = false;
+  static Map<String, String>? _voiceFiles;
+
+  /// 녹음 파일을 찾는 열쇠: 문장에서 한글·숫자·영문만 남긴다
+  /// (띄어쓰기, 문장부호, 이모지, 줄바꿈용 결합자 차이는 무시)
+  static String voiceKey(String text) =>
+      text.replaceAll(RegExp(r'[^0-9A-Za-z\uAC00-\uD7A3]'), '');
+
+  static Future<Map<String, String>> _loadVoiceFiles() async {
+    if (_voiceFiles != null) return _voiceFiles!;
+    try {
+      final raw = await rootBundle.loadString('assets/voice/manifest.json');
+      _voiceFiles = Map<String, String>.from(json.decode(raw) as Map);
+    } catch (e) {
+      debugPrint('Voice manifest not loaded: $e');
+      _voiceFiles = {};
+    }
+    return _voiceFiles!;
+  }
 
   /// TTS 초기화
   static Future<void> initialize() async {
@@ -99,8 +125,16 @@ class TtsService {
 
   /// 텍스트 읽기
   static Future<void> speak(String text) async {
+    await stop(); // 기존 음성 중단
+
+    final file = (await _loadVoiceFiles())[voiceKey(text)];
+    if (file != null) {
+      await _voicePlayer.play(AssetSource('voice/$file'));
+      return;
+    }
+    debugPrint('No recorded voice, using device TTS: $text');
+
     if (!_isInitialized) await initialize();
-    await _flutterTts.stop(); // 기존 음성 중단
 
     // 시간 TTS 교정 (N시를 고유어 발음표기로 명시적 변환)
     String fixedText = _fixPronunciation(text);
@@ -128,6 +162,7 @@ class TtsService {
 
   /// 읽기 중단
   static Future<void> stop() async {
-    await _flutterTts.stop();
+    await _voicePlayer.stop();
+    if (_isInitialized) await _flutterTts.stop();
   }
 }

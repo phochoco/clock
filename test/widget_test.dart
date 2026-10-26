@@ -42,9 +42,10 @@ void main() {
     await tester.tap(find.byTooltip('보호자 안내'));
     await tester.pump(const Duration(milliseconds: 250));
 
-    expect(find.text('보호자 안내'), findsWidgets);
-    expect(find.textContaining('광고, 계정 가입, 외부 전송 없이'), findsOneWidget);
-    expect(find.textContaining('Google AdMob'), findsNothing);
+    expect(_plainTextContaining('보호자 안내'), findsWidgets);
+    expect(_plainTextContaining('광고, 계정 가입, 외부 전송 없이'), findsOneWidget);
+    expect(_plainTextContaining('studiophochoco@gmail.com'), findsOneWidget);
+    expect(_plainTextContaining('Google AdMob'), findsNothing);
   });
 
   testWidgets(
@@ -64,8 +65,15 @@ void main() {
       await tester.pump();
 
       expect(find.text('2번 버섯 숲'), findsOneWidget);
-      expect(find.text('버섯 숲부터 탐험해 줘!'), findsOneWidget);
+      expect(_plainTextContaining('버섯 숲부터 탐험해 줘!'), findsOneWidget);
       await tester.pump(const Duration(seconds: 1));
     },
   );
 }
+
+/// 낱말 줄바꿈용 결합자(U+2060)를 뺀 글자로 찾기
+Finder _plainTextContaining(String text) => find.byWidgetPredicate(
+  (widget) =>
+      widget is Text &&
+      (widget.data ?? '').replaceAll('\u2060', '').contains(text),
+);

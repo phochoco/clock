@@ -19,8 +19,12 @@ class ClockHint {
     final hour = _displayHour(correct.hour);
     if (correct.minute == 0) return '짧은 바늘을 숫자 $hour에 맞춰 봐!';
     final nextHour = _displayHour(correct.hour + 1);
-    return '짧은 바늘은 $hour에서 $nextHour 쪽으로 조금 가 있어야 해!';
+    return '짧은 바늘은 숫자 $hour${_andParticle(hour)} $nextHour 사이에 있어야 해!';
   }
+
+  /// 숫자를 한자어로 읽었을 때 받침이 있으면 '과', 없으면 '와'
+  static String _andParticle(int number) =>
+      const {2, 4, 5, 9, 12}.contains(number) ? '와' : '과';
 
   static int _displayHour(int hour) {
     final h = hour % 12;
