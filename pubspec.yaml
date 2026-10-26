@@ -75,6 +75,8 @@ flutter:
   assets:
     - assets/good/
     - assets/images/themes/
+    - assets/images/map/
+    - assets/images/mascot/
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

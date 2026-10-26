@@ -47,4 +47,17 @@ class AppColors {
   static const Color appleBlue = Color(0xFF0A84FF);
   static const Color appleRed = Color(0xFFFF453A);
   static const Color appleYellow = Color(0xFFFFD60A);
+
+  // 보물섬 지도 로비
+  static const Color mapSea = Color(0xFF1FB5D6);
+  static const Color mapSeaDeep = Color(0xFF0B8FB8);
+  static const Color mapSand = Color(0xFFFFF3D6);
+  static const Color mapGlow = Color(0xFFFFE36E);
+  static const Color mapStar = Color(0xFFFFC72C);
+  static const Color mapLock = Color(0xFF6B5B95);
+  static const Color woodLight = Color(0xFFC98A4B);
+  static const Color wood = Color(0xFF9A5E2C);
+  static const Color woodDark = Color(0xFF5C3A1A);
+  static const Color treasureOrange = Color(0xFFFF9A1F);
+  static const Color treasureOrangeDeep = Color(0xFFF2620F);
 }

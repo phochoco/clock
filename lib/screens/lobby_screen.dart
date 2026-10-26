@@ -1,20 +1,16 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
-import '../models/clock_theme.dart';
-import '../models/clock_time.dart';
 import '../models/quiz_level.dart';
 import '../services/reward_service.dart';
+import '../services/tts_service.dart';
 import '../utils/colors.dart';
-import '../widgets/analog_clock.dart';
-import '../widgets/glass_container.dart';
-import '../widgets/mesh_background.dart';
+import '../widgets/treasure_map.dart';
 import 'playground_screen.dart';
 import 'game_mode_screen.dart';
 import 'quiz_screen.dart';
 import 'reward_screen.dart';
 
 /// 메인 로비 화면
-/// 학습 모드, 퀴즈 모드, 보상방 진입점
+/// 보물섬 지도에서 레벨(섬)을 고르고, 놀이 모드·내 시계들·바늘 연습으로 이동
 class LobbyScreen extends StatefulWidget {
   const LobbyScreen({super.key});
 
@@ -26,15 +22,20 @@ class _LobbyScreenState extends State<LobbyScreen>
     with SingleTickerProviderStateMixin {
   late final AnimationController _motionController;
   QuizLevel _recommendedLevel = QuizLevel.level1;
-  var _completedLevelCount = 0;
+  Set<int> _completedLevels = {};
+  var _totalStars = 0;
+  String? _mascotLine;
+
+  bool get _allLevelsComplete =>
+      _completedLevels.length >= QuizLevel.values.length;
 
   @override
   void initState() {
     super.initState();
     _motionController = AnimationController(
       vsync: this,
-      duration: Duration(seconds: 8),
-    )..repeat();
+      duration: Duration(seconds: 2),
+    )..repeat(reverse: true);
     _loadPracticeProgress();
   }
 
@@ -46,6 +47,7 @@ class _LobbyScreenState extends State<LobbyScreen>
 
   Future<void> _loadPracticeProgress() async {
     final completedLevels = await RewardService.getCompletedLevels();
+    final totalStars = await RewardService.getTotalStars();
     final nextLevel = QuizLevel.values.firstWhere(
       (level) => !completedLevels.contains(level.number),
       orElse: () => QuizLevel.level5,
@@ -54,99 +56,113 @@ class _LobbyScreenState extends State<LobbyScreen>
     if (!mounted) return;
     setState(() {
       _recommendedLevel = nextLevel;
-      _completedLevelCount = completedLevels.length;
+      _completedLevels = completedLevels.toSet();
+      _totalStars = totalStars;
+      _mascotLine = null;
     });
+  }
+
+  String get _defaultMascotLine {
+    if (_allLevelsComplete) return '모든 섬을 탐험했어! 다시 가 볼까?';
+    if (_completedLevels.isEmpty) return '함께 보물섬으로 떠나자!';
+    return '${TreasureIsland.of(_recommendedLevel).name}으로 떠나자!';
+  }
+
+  void _say(String line) {
+    setState(() => _mascotLine = line);
+    TtsService.speak(line);
+  }
+
+  Future<void> _open(Widget screen) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => screen),
+    );
+    _loadPracticeProgress();
+  }
+
+  void _onIslandTap(TreasureIsland island, IslandState state) {
+    if (state == IslandState.locked) {
+      final previous = TreasureIsland.of(island.level.previous!);
+      _say('${previous.name}부터 탐험해 줘!');
+      return;
+    }
+    _open(QuizScreen(initialLevel: island.level));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.bgPrimary,
-      body: MeshBackground(
-        child: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
+      backgroundColor: AppColors.mapSea,
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/map/sea_bg.jpg',
+              fit: BoxFit.cover,
+              alignment: Alignment.topCenter,
+              errorBuilder: (_, _, _) => DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [AppColors.mapSea, AppColors.mapSeaDeep],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
             child: Column(
               children: [
-                _buildGuardianInfoButton(),
-                SizedBox(height: 8),
-
-                _buildTitle(),
-                SizedBox(height: 18),
-
-                _buildDailyPracticeCard(context),
-                SizedBox(height: 14),
-                _buildMainGlassButton(
-                  context,
-                  icon: Icons.schedule_rounded,
-                  label: '바늘 움직여 보기',
-                  subtitle: '짧은 바늘과 긴 바늘을 살펴봐요',
-                  color: AppColors.appleBlue,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => PlaygroundScreen(),
-                      ),
-                    );
-                  },
+                _buildHeader(),
+                Expanded(
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
+                    child: TreasureMap(
+                      completedLevels: _completedLevels,
+                      currentLevel: _recommendedLevel,
+                      onIslandTap: _onIslandTap,
+                    ),
+                  ),
                 ),
-
-                SizedBox(height: 14),
-
-                _buildMainGlassButton(
-                  context,
-                  icon: Icons.bolt_rounded,
-                  label: '놀이 모드',
-                  subtitle: '이야기와 도전으로 시간을 익혀요',
-                  color: AppColors.appleRed,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => GameModeScreen()),
-                    );
-                  },
-                ),
-
-                SizedBox(height: 14),
-
-                _buildMainGlassButton(
-                  context,
-                  icon: Icons.grid_view_rounded,
-                  label: '내 시계들',
-                  subtitle: '모은 시계를 살펴봐요',
-                  color: AppColors.appleYellow,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => RewardScreen()),
-                    );
-                  },
-                ),
-
-                SizedBox(height: 28),
+                _buildMascotRow(),
+                _buildBottomBar(),
+                SizedBox(height: 12),
               ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget _buildGuardianInfoButton() {
+  Widget _buildHeader() {
     return Padding(
-      padding: EdgeInsets.fromLTRB(16, 8, 16, 0),
-      child: Align(
-        alignment: Alignment.centerRight,
-        child: IconButton(
-          tooltip: '보호자 안내',
-          icon: Icon(
-            Icons.shield_outlined,
-            color: AppColors.textLight,
-            size: 24,
+      padding: EdgeInsets.fromLTRB(12, 8, 12, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 84,
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: _CircleIconButton(
+                tooltip: '보호자 안내',
+                icon: Icons.shield_outlined,
+                onPressed: _showGuardianInfoDialog,
+              ),
+            ),
           ),
-          onPressed: _showGuardianInfoDialog,
-        ),
+          Expanded(child: Center(child: _WoodenLogo())),
+          SizedBox(
+            width: 84,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: _StarCounter(stars: _totalStars),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -178,220 +194,404 @@ class _LobbyScreenState extends State<LobbyScreen>
     );
   }
 
-  Widget _buildTitle() {
-    return Column(
-      children: [
-        SizedBox(height: 8),
-        Text(
-          '오늘의 연습',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0,
-            color: AppColors.textLight,
-          ),
-        ),
-        SizedBox(height: 10),
-
-        Text(
-          '째깍',
-          style: TextStyle(
-            fontSize: 48,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 0,
-            color: AppColors.textDark,
-          ),
-        ),
-
-        SizedBox(height: 10),
-
-        Text(
-          '바늘을 맞춰 시간을 익혀요.',
-          style: TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w600,
-            letterSpacing: 0,
-            color: AppColors.textLight,
-          ),
-        ),
-        SizedBox(height: 26),
-        _buildAnimatedTitleIcon(),
-      ],
-    );
-  }
-
-  Widget _buildAnimatedTitleIcon() {
-    return AnimatedBuilder(
-      animation: _motionController,
-      builder: (context, child) {
-        final t = _motionController.value;
-        return Transform.scale(
-          scale: 1 + math.sin(t * math.pi * 2) * 0.012,
-          child: SizedBox(
-            width: 240,
-            height: 240,
-            child: AnalogClock(
-              initialTime: ClockTime(hour: 10, minute: 10),
-              interactive: false,
-              showGuideline: false,
-              showMinuteNumbers: false,
-              notifyInitialTime: false,
-              theme: ClockThemeList.basic,
+  Widget _buildMascotRow() {
+    return SizedBox(
+      height: 104,
+      child: Padding(
+        padding: EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            GestureDetector(
+              onTap: () => _say(_defaultMascotLine),
+              child: AnimatedBuilder(
+                animation: _motionController,
+                builder: (context, child) => Transform.translate(
+                  offset: Offset(
+                    0,
+                    -4 * Curves.easeInOut.transform(_motionController.value),
+                  ),
+                  child: child,
+                ),
+                child: Image.asset(
+                  'assets/images/mascot/wave.png',
+                  height: 100,
+                  semanticLabel: '앵무새 째깍이',
+                  errorBuilder: (_, _, _) => SizedBox(width: 90),
+                ),
+              ),
             ),
-          ),
-        );
-      },
+            SizedBox(width: 4),
+            Flexible(
+              child: Padding(
+                padding: EdgeInsets.only(bottom: 44),
+                child: _SpeechBubble(text: _mascotLine ?? _defaultMascotLine),
+              ),
+            ),
+            SizedBox(width: 8),
+            Padding(
+              padding: EdgeInsets.only(bottom: 4),
+              child: _RoundMenuButton(
+                icon: Icons.schedule_rounded,
+                label: '바늘 연습',
+                color: AppColors.appleBlue,
+                onTap: () => _open(PlaygroundScreen()),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
-  double _cardWidth(BuildContext context) {
-    return math.min(MediaQuery.of(context).size.width - 40, 360.0);
-  }
-
-  Widget _buildDailyPracticeCard(BuildContext context) {
-    final allLevelsComplete = _completedLevelCount >= QuizLevel.values.length;
-    final title = allLevelsComplete
-        ? '마스터 복습하기'
-        : '레벨 ${_recommendedLevel.number} 이어 하기';
-    final subtitle = allLevelsComplete
+  Widget _buildBottomBar() {
+    final level = _recommendedLevel;
+    final subtitle = _allLevelsComplete
         ? '어려운 시간도 다시 연습해요'
-        : '${_recommendedLevel.description} 문제 5개';
+        : '${level.number}번 섬 · ${level.description}';
 
-    return GlassContainer(
-      onTap: () async {
-        await Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => QuizScreen(initialLevel: _recommendedLevel),
-          ),
-        );
-        _loadPracticeProgress();
-      },
-      width: _cardWidth(context),
-      height: 88,
-      padding: EdgeInsets.symmetric(horizontal: 18),
-      borderRadius: 28,
-      opacity: 0.84,
-      blurRadius: 18,
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 4, 16, 0),
       child: Row(
         children: [
-          Container(
-            width: 54,
-            height: 54,
-            decoration: BoxDecoration(
-              color: AppColors.appleBlue.withValues(alpha: 0.14),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.play_arrow_rounded,
-              color: AppColors.appleBlue,
-              size: 32,
-            ),
+          _RoundMenuButton(
+            icon: Icons.inventory_2_rounded,
+            label: '내 시계들',
+            color: AppColors.wood,
+            onTap: () => _open(RewardScreen()),
           ),
-          SizedBox(width: 16),
+          SizedBox(width: 12),
           Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: TextStyle(
-                    fontSize: 21,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0,
-                    color: AppColors.textLight,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+            child: _StartButton(
+              title: _allLevelsComplete ? '복습하기' : '시작하기',
+              subtitle: subtitle,
+              onTap: () => _open(QuizScreen(initialLevel: level)),
             ),
           ),
-          Icon(
-            Icons.chevron_right_rounded,
-            color: AppColors.appleBlue,
-            size: 28,
+          SizedBox(width: 12),
+          _RoundMenuButton(
+            icon: Icons.explore_rounded,
+            label: '놀이 모드',
+            color: AppColors.appleRed,
+            onTap: () => _open(GameModeScreen()),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildMainGlassButton(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required String subtitle,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GlassContainer(
-      onTap: onTap,
-      width: _cardWidth(context),
-      height: 76,
-      padding: EdgeInsets.symmetric(horizontal: 18),
-      borderRadius: 28,
-      opacity: 0.76,
-      blurRadius: 18,
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 46,
-            height: 46,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.14),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, size: 24, color: color),
-          ),
-          SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 19,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0,
-                    color: AppColors.textDark,
-                  ),
-                ),
-                SizedBox(height: 3),
-                Text(
-                  subtitle,
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0,
-                    color: AppColors.textLight,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            Icons.chevron_right_rounded,
-            color: AppColors.textLight.withValues(alpha: 0.72),
-            size: 26,
+/// 나무 간판 모양의 앱 로고
+class _WoodenLogo extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(18, 8, 18, 10),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [AppColors.woodLight, AppColors.wood],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.woodDark, width: 3),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.25),
+            blurRadius: 10,
+            offset: Offset(0, 5),
           ),
         ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          _OutlinedText('째깍', size: 24, fill: AppColors.mapGlow),
+          _OutlinedText('보물섬', size: 30, fill: Color(0xFF8FE3FF)),
+        ],
+      ),
+    );
+  }
+}
+
+class _OutlinedText extends StatelessWidget {
+  const _OutlinedText(this.text, {required this.size, required this.fill});
+
+  final String text;
+  final double size;
+  final Color fill;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = TextStyle(
+      fontSize: size,
+      fontWeight: FontWeight.w900,
+      height: 1.1,
+      letterSpacing: 1,
+    );
+    return Stack(
+      children: [
+        Text(
+          text,
+          style: style.copyWith(
+            foreground: Paint()
+              ..style = PaintingStyle.stroke
+              ..strokeWidth = 5
+              ..strokeJoin = StrokeJoin.round
+              ..color = AppColors.woodDark,
+          ),
+        ),
+        Text(text, style: style.copyWith(color: fill)),
+      ],
+    );
+  }
+}
+
+class _StarCounter extends StatelessWidget {
+  const _StarCounter({required this.stars});
+
+  final int stars;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: '모은 별 $stars개',
+      excludeSemantics: true,
+      child: Container(
+        padding: EdgeInsets.fromLTRB(6, 4, 12, 4),
+        decoration: BoxDecoration(
+          color: AppColors.mapSand,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.woodLight, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.18),
+              blurRadius: 6,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.star_rounded, color: AppColors.mapStar, size: 24),
+            SizedBox(width: 2),
+            Text(
+              '$stars',
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
+                color: AppColors.woodDark,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _CircleIconButton extends StatelessWidget {
+  const _CircleIconButton({
+    required this.tooltip,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String tooltip;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      tooltip: tooltip,
+      onPressed: onPressed,
+      style: IconButton.styleFrom(
+        backgroundColor: Colors.white.withValues(alpha: 0.85),
+      ),
+      icon: Icon(icon, color: AppColors.woodDark, size: 22),
+    );
+  }
+}
+
+class _SpeechBubble extends StatelessWidget {
+  const _SpeechBubble({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedSwitcher(
+      duration: Duration(milliseconds: 250),
+      child: Container(
+        key: ValueKey(text),
+        padding: EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(18),
+            topRight: Radius.circular(18),
+            bottomRight: Radius.circular(18),
+            bottomLeft: Radius.circular(4),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.18),
+              blurRadius: 8,
+              offset: Offset(0, 3),
+            ),
+          ],
+        ),
+        child: Text(
+          text,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            color: AppColors.woodDark,
+            height: 1.3,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// 아이 손가락에 맞춘 큰 원형 메뉴 버튼 (아래에 이름표)
+class _RoundMenuButton extends StatelessWidget {
+  const _RoundMenuButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: label,
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 62,
+              height: 62,
+              decoration: BoxDecoration(
+                color: AppColors.mapSand,
+                shape: BoxShape.circle,
+                border: Border.all(color: AppColors.woodLight, width: 3),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.25),
+                    blurRadius: 8,
+                    offset: Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Icon(icon, color: color, size: 32),
+            ),
+            SizedBox(height: 3),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                shadows: [
+                  Shadow(color: AppColors.woodDark, blurRadius: 3),
+                  Shadow(color: AppColors.woodDark, blurRadius: 6),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StartButton extends StatelessWidget {
+  const _StartButton({
+    required this.title,
+    required this.subtitle,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      button: true,
+      label: '$title, $subtitle',
+      excludeSemantics: true,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          height: 76,
+          padding: EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [AppColors.treasureOrange, AppColors.treasureOrangeDeep],
+            ),
+            borderRadius: BorderRadius.circular(38),
+            border: Border.all(color: Colors.white, width: 3),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.woodDark.withValues(alpha: 0.45),
+                blurRadius: 0,
+                offset: Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.play_arrow_rounded, color: Colors.white, size: 40),
+              SizedBox(width: 2),
+              Flexible(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white,
+                        height: 1.1,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.white.withValues(alpha: 0.92),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

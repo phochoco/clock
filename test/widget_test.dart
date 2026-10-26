@@ -8,10 +8,25 @@ void main() {
     await tester.pumpWidget(const MyClockApp());
 
     // Verify that the lobby screen loads with the primary learning path.
-    expect(find.text('레벨 1 이어 하기'), findsOneWidget);
-    expect(find.text('바늘 움직여 보기'), findsOneWidget);
-    expect(find.text('놀이 모드'), findsOneWidget);
-    expect(find.text('내 시계들'), findsOneWidget);
+    expect(find.bySemanticsLabel(RegExp('^시작하기')), findsOneWidget);
+    expect(find.bySemanticsLabel('바늘 연습'), findsOneWidget);
+    expect(find.bySemanticsLabel('놀이 모드'), findsOneWidget);
+    expect(find.bySemanticsLabel('내 시계들'), findsOneWidget);
+  });
+
+  testWidgets('Treasure map shows five islands with only the first open', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(const MyClockApp());
+    await tester.pump();
+
+    expect(
+      find.bySemanticsLabel(RegExp('^1번 야자수 해변.*지금 탐험할 섬')),
+      findsOneWidget,
+    );
+    for (final name in ['버섯 숲', '화산섬', '얼음섬', '황금성']) {
+      expect(find.bySemanticsLabel(RegExp('$name.*아직 잠겨 있음')), findsOneWidget);
+    }
   });
 
   testWidgets('Guardian info is available from lobby', (
