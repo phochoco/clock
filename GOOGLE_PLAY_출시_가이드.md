@@ -1,31 +1,23 @@
 # 🚀 째깍 보물섬 - Google Play Store 출시 가이드
 
 ## 📌 현재 진행 상태
-- [x] 개발자 계정 생성 (ID: `8061396648504933089`, 2023년 11월 이전 계정 → **비공개 테스트 20명/14일 요건 없음**)
-- [x] 앱 설정 완료 (콘텐츠 등급, 타겟층, 데이터 보안 등)
+- [x] 개발자 계정: **phochoco2018@gmail.com** (계정 ID `7279723087765171735`) — 프로덕션 바로 출시 가능, 비공개 테스트 요건 없음
+- [x] 패키지 이름: `com.nyangdosa.tictacktreasure` (예전 `com.tictacktreasure.clock`은 다른 계정(yeajunss)의 거부된 초안이 쓰고 있어 쓰지 않음)
+- [x] 새 업로드 키 + `android/key.properties` 생성 (2026-10-27)
+- [ ] phochoco2018 Play Console에서 새 앱 만들기 + 앱 콘텐츠 설정 (콘텐츠 등급, 타겟층, 데이터 보안 등)
 - [x] 보물섬 리디자인 · 째깍이 녹음 음성 · 섬별 문제 구성 완료 (v1.1.0)
-- [ ] `android/key.properties` 만들기 (아래 "서명 설정")
 - [ ] AAB 빌드 후 **프로덕션 트랙**에 바로 업로드
 - [ ] 스토어 등록정보를 아래 v1.1.0 문구·새 스크린샷으로 교체
 - [ ] 개인정보처리방침 페이지의 문의 메일을 `studiophochoco@gmail.com`으로 수정 (Notion 페이지를 쓰고 있다면 그쪽도)
 
 ---
 
-## 🔐 서명 설정 (처음 한 번)
+## 🔐 서명 설정
 
-업로드 키: `~/upload-keystore.jks` (2026-01-09 생성)
-
-`android/key.properties` 파일을 아래처럼 만든다. 이 파일과 `.jks`는 git에 올라가지 않는다(`android/.gitignore`).
-
-```properties
-storePassword=키스토어_비밀번호
-keyPassword=키_비밀번호
-keyAlias=upload
-storeFile=/Users/pochoco/upload-keystore.jks
-```
-
-> `keyAlias`가 `upload`가 아니면 키를 만들 때 쓴 별칭으로 바꾼다.
-> `key.properties`가 없으면 릴리스 빌드가 **디버그 키로 서명**되어 Play에 올릴 수 없다.
+- 업로드 키: `~/Documents/android-signing-keys/tictack/tictack-upload.jks` (별칭 `upload`, SHA-1 `95:86:7C:32:A8:53:3A:26:73:93:23:05:1C:B5:77:3D:12:BE:E8:0B`)
+- 비밀번호는 같은 폴더의 `key.properties`에 저장돼 있고, `android/key.properties`는 그 복사본이다. 둘 다 git에 올라가지 않는다.
+- **이 폴더 전체를 따로 백업해 둘 것.** 잃어버리면 Play Console에서 업로드 키 재설정을 요청해야 한다.
+- 예전 키 `~/upload-keystore.jks`는 비밀번호를 몰라 쓰지 않는다.
 
 ---
 

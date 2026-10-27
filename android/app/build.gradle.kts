@@ -16,7 +16,7 @@ if (keystorePropertiesFile.exists()) {
 }
 
 android {
-    namespace = "com.tictacktreasure.clock"
+    namespace = "com.nyangdosa.tictacktreasure"
     compileSdk = 36
     ndkVersion = flutter.ndkVersion
 
@@ -30,7 +30,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.tictacktreasure.clock"
+        applicationId = "com.nyangdosa.tictacktreasure"
         minSdk = flutter.minSdkVersion  // Android 5.0 (Lollipop)
         targetSdk = 36  // Android 15
         versionCode = flutter.versionCode
