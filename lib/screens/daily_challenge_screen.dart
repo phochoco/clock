@@ -36,6 +36,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
 
   // 타이머
   Timer? _countdownTimer;
+  bool _finishing = false; // 완료 처리 중
   int _timeUntilReset = 0;
 
   @override
@@ -55,6 +56,8 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
     final streak = await DailyChallengeService.getStreak();
     final theme = await ThemeService.getSelectedTheme();
 
+    // 불러오는 사이 화면을 나갔으면 타이머를 만들지 않는다
+    if (!mounted) return;
     setState(() {
       _isCompleted = completed;
       _streak = streak;
@@ -62,25 +65,29 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
 
       if (!completed) {
         _generateQuestions();
-        _startCountdown();
       } else {
         _timeUntilReset = DailyChallengeService.getTimeUntilReset();
-        _startCountdown();
       }
     });
+    _startCountdown();
   }
 
   void _generateQuestions() {
     // 레벨 3, 4, 5 문제 각 1개씩
     _questions = [
-      QuizQuestion.random(QuizLevel.level3),
-      QuizQuestion.random(QuizLevel.level4),
-      QuizQuestion.random(QuizLevel.level5),
+      handsQuestion(QuizLevel.level3),
+      handsQuestion(QuizLevel.level4),
+      handsQuestion(QuizLevel.level5),
     ];
   }
 
   void _startCountdown() {
+    _countdownTimer?.cancel();
     _countdownTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
       setState(() {
         _timeUntilReset = DailyChallengeService.getTimeUntilReset();
       });
@@ -88,7 +95,8 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
   }
 
   void _checkAnswer() {
-    if (_userAnswer == null) return;
+    // 마지막 문제를 두 번 눌러 별을 두 번 받지 않게
+    if (_finishing || _isCompleted || _userAnswer == null) return;
 
     final currentQuestion = _questions[_currentQuestionIndex];
     final correctTime = ClockTime(
@@ -134,6 +142,8 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
   }
 
   Future<void> _completeChallenge() async {
+    if (_finishing) return;
+    _finishing = true;
     await DailyChallengeService.completeChallenge();
     final newStreak = await DailyChallengeService.getStreak();
 
@@ -151,6 +161,7 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
 
     await RewardService.addStars(stars);
 
+    if (!mounted) return;
     setState(() {
       _isCompleted = true;
       _streak = newStreak;
@@ -382,7 +393,8 @@ class _DailyChallengeScreenState extends State<DailyChallengeScreen> {
       width: 280,
       height: 280,
       child: AnalogClock(
-        initialTime: _userAnswer,
+        // 실제 시각이 아니라 12시에서 시작 (손대기 전엔 정답 확인이 꺼져 있게)
+        initialTime: _userAnswer ?? handsStartTime,
         notifyInitialTime: false,
         interactive: true,
         showGuideline: false,

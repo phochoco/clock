@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/clock_theme.dart';
 
-/// 시계 테마의 일러스트 아이콘 (assets/images/clocks/<테마 ID>.png)
+/// 시계 테마의 일러스트 아이콘 (assets/images/clocks/<테마 ID>.webp)
 /// 잠긴 시계는 흑백으로 흐리게 보여준다
 class ClockThemeIcon extends StatelessWidget {
   const ClockThemeIcon({
@@ -18,7 +18,7 @@ class ClockThemeIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget icon = Image.asset(
-      'assets/images/clocks/${theme.id}.png',
+      'assets/images/clocks/${theme.id}.webp',
       width: size,
       height: size,
       fit: BoxFit.contain,

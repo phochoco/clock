@@ -30,6 +30,7 @@ class _RewardScreenState extends State<RewardScreen> {
   String _selectedThemeId = 'basic_clock';
   bool _isLoading = true;
   int _selectedTabIndex = 0; // 0: 모은 시계, 1: 별로 열기
+  bool _buying = false;
 
   @override
   void initState() {
@@ -530,13 +531,21 @@ class _RewardScreenState extends State<RewardScreen> {
             label: '별 ${theme.starCost}개로 열기',
             icon: Icons.lock_open_rounded,
             onTap: () async {
-              final success = await RewardService.spendStars(theme.starCost);
-              if (!success) return;
-              await RewardService.unlockReward(theme.id);
-              await _loadData();
-              if (!dialogContext.mounted) return;
-              Navigator.pop(dialogContext);
-              _showUnlockAnimation(theme);
+              // 버튼을 두 번 눌러 별이 두 번 빠지지 않게
+              if (_buying) return;
+              _buying = true;
+              try {
+                if (await RewardService.isRewardUnlocked(theme.id)) return;
+                final success = await RewardService.spendStars(theme.starCost);
+                if (!success) return;
+                await RewardService.unlockReward(theme.id);
+                await _loadData();
+                if (!dialogContext.mounted) return;
+                Navigator.pop(dialogContext);
+                _showUnlockAnimation(theme);
+              } finally {
+                _buying = false;
+              }
             },
           ),
           SandChunkyButton(
@@ -776,7 +785,7 @@ class _UnlockRevealState extends State<_UnlockReveal>
                             );
                           },
                           child: Image.asset(
-                            'assets/images/map/locked_chest.png',
+                            'assets/images/map/locked_chest.webp',
                             height: 190,
                           ),
                         ),

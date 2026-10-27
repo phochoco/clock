@@ -64,17 +64,31 @@ void main() {
   });
 
   test('an island never repeats a time and set-hands never asks 12:00', () {
-    for (var run = 0; run < 200; run++) {
-      final session = QuizSession()..start(level: QuizLevel.level1);
+    for (var run = 0; run < 600; run++) {
+      final level = QuizLevel.values[run % QuizLevel.values.length];
+      final session = QuizSession()..start(level: level);
       final seen = <int>{};
       for (var i = 0; i < 5; i++) {
         final q = session.currentQuestion!;
         final key = (q.hour % 12) * 60 + q.minute;
         expect(seen.add(key), isTrue);
-        expect(key, isNot(0));
+        if (session.currentTask != QuizTask.readClock) {
+          expect([0, 1, 719], isNot(contains(key)));
+        }
         session.answer(ClockTime(hour: q.hour, minute: q.minute));
         session.nextQuestion();
       }
     }
+  });
+
+  test('perfect only when no answer in the island was wrong', () {
+    final session = QuizSession()..start(level: QuizLevel.level1);
+    expect(session.isPerfect, isTrue);
+    final q = session.currentQuestion!;
+    session.answer(ClockTime(hour: (q.hour + 6) % 12, minute: 0));
+    expect(session.isPerfect, isFalse);
+    expect(session.mistakes, 1);
+    session.switchLevel(QuizLevel.level1);
+    expect(session.isPerfect, isTrue);
   });
 }

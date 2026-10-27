@@ -111,7 +111,7 @@ class _JjakkagiState extends State<Jjakkagi>
               child: child,
             ),
             child: Image.asset(
-              'assets/images/mascot/${widget.pose.name}.png',
+              'assets/images/mascot/${widget.pose.name}.webp',
               key: ValueKey(widget.pose),
               height: widget.height,
               fit: BoxFit.contain,

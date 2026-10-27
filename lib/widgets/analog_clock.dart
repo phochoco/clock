@@ -67,7 +67,11 @@ class AnalogClockState extends State<AnalogClock>
     _flickerController = AnimationController(
       duration: Duration(milliseconds: 1500),
       vsync: this,
-    )..repeat(reverse: true);
+    );
+    // 깜빡임은 예전 그리기 방식에서만 쓴다 (일러스트 시계는 자체 장식 애니메이션)
+    if (ClockFaceArt.of(widget.theme?.id ?? 'basic_clock') == null) {
+      _flickerController.repeat(reverse: true);
+    }
 
     _flickerAnimation = Tween<double>(begin: 0.3, end: 1.0).animate(
       CurvedAnimation(parent: _flickerController, curve: Curves.easeInOut),

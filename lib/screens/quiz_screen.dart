@@ -47,6 +47,9 @@ class _QuizScreenState extends State<QuizScreen> {
   MascotPose _mascotPose = MascotPose.point;
   String _mascotLine = _idleLine;
 
+  // 섬 완료 처리 중 (중복 방지)
+  var _completing = false;
+
   // 시계 읽기 문제의 보기
   List<ClockTime> _readOptions = [];
   final _random = math.Random();
@@ -163,6 +166,7 @@ class _QuizScreenState extends State<QuizScreen> {
       return;
     }
     setState(() {
+      _completing = false;
       _session.switchLevel(level);
       _prepareTask();
       _resetClock();
@@ -239,9 +243,14 @@ class _QuizScreenState extends State<QuizScreen> {
   }
 
   void _showLevelCompleteDialog() async {
+    // 보물상자 열기를 두 번 눌러 별을 두 번 받거나 창이 두 개 뜨지 않게
+    if (_completing) return;
+    setState(() => _completing = true);
+
     final level = _session.currentLevel;
     final island = _island;
-    final score = _session.score;
+    final perfect = _session.isPerfect;
+    final mistakes = _session.mistakes;
 
     // 레벨 완료 기록 (처음 깬 섬이면 첫 탐험 보너스)
     final firstClear = await RewardService.completeLevel(level.number);
@@ -249,8 +258,8 @@ class _QuizScreenState extends State<QuizScreen> {
       await RewardService.addStars(RewardService.firstClearBonusStars);
     }
 
-    // 완벽한 클리어 보너스 (5/5 정답)
-    if (score == questionsPerLevel) {
+    // 한 번도 틀리지 않았을 때만 만점 보너스
+    if (perfect) {
       await RewardService.addStars(3); // 보너스 별 3개
     }
 
@@ -279,12 +288,14 @@ class _QuizScreenState extends State<QuizScreen> {
         title: title,
         message: nextLevel == null
             ? '레벨 1부터 레벨 5까지\n모두 성공하였습니다!'
-            : '$questionsPerLevel문제 중 $score문제를 맞췄어요!',
-        score: score,
+            : perfect
+            ? '한 번도 안 틀리고 $questionsPerLevel문제를 다 맞췄어요!'
+            : '$questionsPerLevel문제를 모두 풀었어요! (틀린 횟수 $mistakes번)',
+        score: (questionsPerLevel - mistakes).clamp(1, questionsPerLevel),
         total: questionsPerLevel,
         bonuses: [
           if (firstClear) '첫 탐험 보너스 별 ${RewardService.firstClearBonusStars}개',
-          if (score == questionsPerLevel) '만점 보너스 별 3개',
+          if (perfect) '만점 보너스 별 3개',
         ],
         reward: reward,
         badgeColor: island.badgeColor,
@@ -571,7 +582,7 @@ class _QuizScreenState extends State<QuizScreen> {
         icon: levelDone ? Icons.redeem_rounded : Icons.arrow_forward_rounded,
         topColor: Color(0xFF4CD964),
         bottomColor: Color(0xFF1FA34A),
-        onTap: _isSavingAnswer
+        onTap: _isSavingAnswer || _completing
             ? null
             : levelDone
             ? _showLevelCompleteDialog

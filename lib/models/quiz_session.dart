@@ -29,6 +29,11 @@ class QuizSession {
   bool showCombo = false;
   int lastEarnedStars = 0;
 
+  /// 이번 섬에서 틀린 횟수 (틀리면 다시 풀어서 결국 5문제를 다 맞히므로 만점 판단은 이것으로)
+  int mistakes = 0;
+
+  bool get isPerfect => mistakes == 0;
+
   /// 지금 문제의 방식 (문제를 낼 때 정해서 정답을 맞혀도 바뀌지 않는다)
   QuizTask currentTask = QuizTask.setHands;
 
@@ -87,6 +92,7 @@ class QuizSession {
       comboMessage = _messageForCombo(combo);
       showCombo = comboMessage.isNotEmpty;
     } else {
+      mistakes++;
       combo = 0;
       comboMessage = '';
       showCombo = false;
@@ -111,6 +117,7 @@ class QuizSession {
 
   void _resetProgress() {
     _askedTimes.clear();
+    mistakes = 0;
     userAnswer = null;
     showResult = false;
     isCorrect = false;
@@ -131,8 +138,9 @@ class QuizSession {
       previous: currentQuestion,
       avoid: {
         ..._askedTimes,
-        // 바늘을 돌리는 문제는 시계가 12시에서 시작하므로 12시 정각은 내지 않는다
-        if (currentTask != QuizTask.readClock) 0,
+        // 바늘을 돌리는 문제는 시계가 12시에서 시작하고 ±1분은 정답으로 치므로
+        // 12시 정각과 그 앞뒤 1분은 내지 않는다
+        if (currentTask != QuizTask.readClock) ...[0, 1, 719],
       },
     );
     final q = currentQuestion!;

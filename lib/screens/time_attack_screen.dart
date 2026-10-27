@@ -70,13 +70,15 @@ class _TimeAttackScreenState extends State<TimeAttackScreen> {
 
   void _startTimer() {
     _timer = Timer.periodic(Duration(seconds: 1), (timer) {
-      setState(() {
-        if (_timeLeft > 0) {
-          _timeLeft--;
-        } else {
-          _gameOver();
-        }
-      });
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      if (_timeLeft > 0) {
+        setState(() => _timeLeft--);
+      } else {
+        _gameOver();
+      }
     });
   }
 
@@ -103,13 +105,13 @@ class _TimeAttackScreenState extends State<TimeAttackScreen> {
     }
 
     setState(() {
-      _currentQuestion = QuizQuestion.random(level);
+      _currentQuestion = handsQuestion(level);
       _userAnswer = null;
     });
   }
 
   void _checkAnswer() {
-    if (_userAnswer == null || _currentQuestion == null) return;
+    if (_isGameOver || _userAnswer == null || _currentQuestion == null) return;
 
     final correctTime = ClockTime(
       hour: _currentQuestion!.hour,
@@ -129,14 +131,16 @@ class _TimeAttackScreenState extends State<TimeAttackScreen> {
     HapticHelper.heavyImpact();
 
     // 시간은 60초로 고정 (정답마다 시간이 늘어 끝나지 않던 문제)
+    // 답을 비워서 다음 문제가 나오기 전 "정답 확인"을 또 눌러도 점수가 두 번 오르지 않게
     setState(() {
       _score++;
       _combo++;
+      _userAnswer = null;
     });
 
     // 다음 문제
     Future.delayed(Duration(milliseconds: 500), () {
-      if (!_isGameOver) {
+      if (mounted && !_isGameOver) {
         _generateQuestion();
       }
     });
@@ -151,6 +155,7 @@ class _TimeAttackScreenState extends State<TimeAttackScreen> {
   }
 
   void _gameOver() async {
+    if (_isGameOver) return;
     _timer?.cancel();
 
     setState(() {
@@ -167,6 +172,7 @@ class _TimeAttackScreenState extends State<TimeAttackScreen> {
     }
 
     // 게임 오버 다이얼로그
+    if (!mounted) return;
     _showGameOverDialog();
   }
 
@@ -355,7 +361,8 @@ class _TimeAttackScreenState extends State<TimeAttackScreen> {
       width: 280,
       height: 280,
       child: AnalogClock(
-        initialTime: _userAnswer,
+        // 실제 시각이 아니라 12시에서 시작 (손대기 전엔 정답 확인이 꺼져 있게)
+        initialTime: _userAnswer ?? handsStartTime,
         notifyInitialTime: false,
         interactive: true,
         showGuideline: false,

@@ -29,7 +29,7 @@ class TreasureIsland {
     TreasureIsland(
       level: QuizLevel.level1,
       name: '야자수 해변',
-      asset: 'assets/images/map/island_1.png',
+      asset: 'assets/images/map/island_1.webp',
       background: 'assets/images/islands/bg_1.jpg',
       badgeColor: Color(0xFFF0457A),
       position: Offset(0.27, 0.85),
@@ -37,7 +37,7 @@ class TreasureIsland {
     TreasureIsland(
       level: QuizLevel.level2,
       name: '버섯 숲',
-      asset: 'assets/images/map/island_2.png',
+      asset: 'assets/images/map/island_2.webp',
       background: 'assets/images/islands/bg_2.jpg',
       badgeColor: Color(0xFF2FB344),
       position: Offset(0.72, 0.67),
@@ -45,7 +45,7 @@ class TreasureIsland {
     TreasureIsland(
       level: QuizLevel.level3,
       name: '화산섬',
-      asset: 'assets/images/map/island_3.png',
+      asset: 'assets/images/map/island_3.webp',
       background: 'assets/images/islands/bg_3.jpg',
       badgeColor: Color(0xFFFF8A00),
       position: Offset(0.30, 0.48),
@@ -53,7 +53,7 @@ class TreasureIsland {
     TreasureIsland(
       level: QuizLevel.level4,
       name: '얼음섬',
-      asset: 'assets/images/map/island_4.png',
+      asset: 'assets/images/map/island_4.webp',
       background: 'assets/images/islands/bg_4.jpg',
       badgeColor: Color(0xFF3B6FE0),
       position: Offset(0.70, 0.30),
@@ -61,7 +61,7 @@ class TreasureIsland {
     TreasureIsland(
       level: QuizLevel.level5,
       name: '황금성',
-      asset: 'assets/images/map/island_5.png',
+      asset: 'assets/images/map/island_5.webp',
       background: 'assets/images/islands/bg_5.jpg',
       badgeColor: Color(0xFF8B4FD8),
       position: Offset(0.34, 0.12),
@@ -133,7 +133,10 @@ class _TreasureMapState extends State<TreasureMap>
             .toList();
         final ship = TreasureIsland.of(widget.currentLevel);
         final shipCenter = centers[ship.level.index];
-        final shipOnRight = ship.position.dx < 0.5;
+        // 배는 보통 섬의 바다 쪽(지도 가운데 쪽)에 대지만,
+        // 황금성은 오른쪽 아래에 얼음섬이 있어 왼쪽에 댄다
+        final shipOnRight =
+            ship.position.dx < 0.5 && ship.level != QuizLevel.level5;
 
         return AnimatedBuilder(
           animation: _wave,
@@ -176,7 +179,7 @@ class _TreasureMapState extends State<TreasureMap>
                       child: Transform.flip(
                         flipX: !shipOnRight,
                         child: Image.asset(
-                          'assets/images/map/ship.png',
+                          'assets/images/map/ship.webp',
                           errorBuilder: (_, _, _) => SizedBox.shrink(),
                         ),
                       ),

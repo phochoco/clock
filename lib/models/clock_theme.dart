@@ -147,7 +147,6 @@ class ClockThemeList {
     secondHandColor: Color(0xFFFF0000), // 클래식 레드 초침
     backgroundColor: Color(0xFF1A1A1A),
     backgroundGradient: null,
-    backgroundImage: 'assets/images/themes/golden_bg.jpg',
     isPremium: true,
     starCost: 250,
   );
@@ -161,7 +160,6 @@ class ClockThemeList {
     secondHandColor: Color(0xFF64B5F6), // 신비로운 푸른빛
     backgroundColor: Color(0xFF0F172A), // 아주 깊은 밤하늘
     backgroundGradient: null,
-    backgroundImage: 'assets/images/themes/moonlight_bg.jpg',
     isPremium: true,
     starCost: 100,
   );
@@ -175,7 +173,6 @@ class ClockThemeList {
     secondHandColor: Color(0xFFB39DDB), // 보라빛 반사광
     backgroundColor: Color(0xFFF3E5F5),
     backgroundGradient: null,
-    backgroundImage: 'assets/images/themes/crystal_bg.jpg',
     isPremium: true,
     starCost: 210,
   );
@@ -189,7 +186,6 @@ class ClockThemeList {
     secondHandColor: Color(0xFFFF5252),
     backgroundColor: Colors.black,
     backgroundGradient: null,
-    backgroundImage: 'assets/images/themes/circus_bg.jpg',
     isPremium: true,
     starCost: 140,
   );
@@ -203,7 +199,6 @@ class ClockThemeList {
     secondHandColor: Color(0xFFF48FB1),
     backgroundColor: Colors.black,
     backgroundGradient: null,
-    backgroundImage: 'assets/images/themes/princess_bg.jpg',
     isPremium: true,
     starCost: 170,
   );
@@ -217,7 +212,6 @@ class ClockThemeList {
     secondHandColor: Color(0xFFE53935), // 경찰 사이렌 레드
     backgroundColor: Colors.black,
     backgroundGradient: null,
-    backgroundImage: 'assets/images/themes/police_bg.jpg',
     isPremium: true,
     starCost: 150,
   );
@@ -231,7 +225,6 @@ class ClockThemeList {
     secondHandColor: Color(0xFF388E3C), // 정글 잎사귀 녹색
     backgroundColor: Colors.black,
     backgroundGradient: null,
-    backgroundImage: 'assets/images/themes/dinosaur_bg.jpg',
     isPremium: true,
     starCost: 190,
   );
@@ -245,7 +238,6 @@ class ClockThemeList {
     secondHandColor: Color(0xFFFF3D00), // 진한 불꽃 오렌지
     backgroundColor: Colors.black,
     backgroundGradient: null,
-    backgroundImage: 'assets/images/themes/spaceship_bg.jpg',
     isPremium: true,
     starCost: 230,
   );
@@ -263,7 +255,6 @@ class ClockThemeList {
       begin: Alignment.topLeft,
       end: Alignment.bottomRight,
     ),
-    backgroundImage: 'assets/images/themes/candy_bg.jpg',
     isPremium: true,
     starCost: 120,
   );

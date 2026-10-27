@@ -190,6 +190,13 @@ String digitalTimeText(int hour, int minute) {
   return '${h.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')}';
 }
 
+/// 바늘을 12시에서부터 돌리는 문제용 시각 (12시 정각과 앞뒤 1분은 시작 상태로도 정답이 되므로 뺀다)
+QuizQuestion handsQuestion(QuizLevel level) =>
+    QuizQuestionGenerator().next(level, avoid: const {0, 1, 719});
+
+/// 바늘 문제의 시계 시작 시각
+final handsStartTime = ClockTime(hour: 12, minute: 0);
+
 /// 퀴즈 문제
 class QuizQuestion {
   final int hour;

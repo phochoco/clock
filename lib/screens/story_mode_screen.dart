@@ -148,7 +148,7 @@ class _StoryModeScreenState extends State<StoryModeScreen> {
         _currentChapterIndex++;
         _showResult = false;
         _userAnswer = null;
-        _clockKey.currentState?.resetToCurrentTime();
+        _clockKey.currentState?.setTime(ClockTime(hour: 12, minute: 0));
         _playNarration();
       } else {
         // 모든 챕터 완료
@@ -295,6 +295,7 @@ class _StoryModeScreenState extends State<StoryModeScreen> {
                 width: clockSize,
                 child: AnalogClock(
                   key: _clockKey,
+                  initialTime: ClockTime(hour: 12, minute: 0),
                   theme: _selectedTheme,
                   interactive: !_showResult || !_isCorrect,
                   notifyInitialTime: false,
