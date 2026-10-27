@@ -109,3 +109,14 @@ python3 tool/voice/generate.py                    # 바뀐 문장만 ElevenLabs�
 - 보호자 확인 뒤에서 한 번만 결제하는 **새 프리미엄 시계팩**(5~6종) — 별은 계속 놀아서만 모은다
 - **영문판**: 화면 번역, 영어 시각 읽기, 영어 음성 약 850개 (ElevenLabs 크레딧 충전 필요)
 - 둥근 한글 폰트, 스토리 챕터 추가, 보호자용 정답률 화면
+
+---
+
+## 🆕 1.1.1 준비 (브랜치 `release/1.1.1`) — 1.1.0 승인 후 진행
+- 새 아이콘: 시안 B "시계 속 보물섬" (`store_assets/icon/`, 다른 시안은 `store_assets/icon_concepts/`)
+  - `app_icon_1024.png` → 앱 아이콘 원본 (`app_icon.png`로 복사, `dart run flutter_launcher_icons`로 생성)
+  - `adaptive_foreground.png` → 안드로이드 적응형 아이콘 (원형·둥근 사각형에서 잘리지 않도록 그림을 70%로 줄임)
+  - `icon_512.png` → Play 스토어 등록정보 > 앱 아이콘에 교체
+- `flutter_launcher_icons`를 돌리면 `ios/Runner.xcodeproj/project.pbxproj`를 엉뚱하게 바꾸므로 그 파일은 되돌린다.
+- 올리는 순서: main에 병합 → `flutter build appbundle --release` → 프로덕션 새 버전(12)에 AAB 업로드 + 스토어 아이콘 교체 → 함께 검토 제출
+- 출시 노트 예시: "째깍이와 보물섬이 담긴 새 아이콘으로 바뀌었어요."
