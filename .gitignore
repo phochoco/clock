@@ -46,3 +46,4 @@ app.*.map.json
 
 # 로컬 비밀값 (ElevenLabs API 키 등)
 .env.local
+store_assets/android/*.aab
